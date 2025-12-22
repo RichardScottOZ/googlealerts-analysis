@@ -5,7 +5,7 @@ google-api-python-client>=2.0.0
 
 # LLM API clients
 openai>=1.0.0
-google-generativeai>=0.3.0  # Note: This package is deprecated, but still functional
+google-generativeai>=0.3.0
 
 # Utilities
 python-dotenv>=1.0.0

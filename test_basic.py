@@ -19,7 +19,7 @@ def test_category_decision_model():
         keywords=["ml", "test"]
     )
     
-    assert decision.is_relevant == True
+    assert decision.is_relevant is True
     assert decision.confidence == 0.85
     assert decision.category == "Machine Learning"
     assert len(decision.keywords) == 2
@@ -27,7 +27,7 @@ def test_category_decision_model():
     # Test model_dump
     data = decision.model_dump()
     assert isinstance(data, dict)
-    assert data['is_relevant'] == True
+    assert data['is_relevant'] is True
     
     print("✅ CategoryDecision model test passed")
 
@@ -49,7 +49,7 @@ def test_category_decision_json_serialization():
     
     # Deserialize
     parsed = json.loads(json_str)
-    assert parsed['is_relevant'] == False
+    assert parsed['is_relevant'] is False
     assert parsed['confidence'] == 0.95
     
     print("✅ JSON serialization test passed")
