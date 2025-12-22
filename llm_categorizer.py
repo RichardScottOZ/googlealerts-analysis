@@ -10,6 +10,19 @@ from typing import List, Dict, Any, Literal
 from pydantic import BaseModel
 import json
 
+# Optional imports - these will be imported dynamically based on provider
+try:
+    import openai
+    HAS_OPENAI = True
+except ImportError:
+    HAS_OPENAI = False
+
+try:
+    import google.generativeai as genai
+    HAS_GEMINI = True
+except ImportError:
+    HAS_GEMINI = False
+
 
 class CategoryDecision(BaseModel):
     """Model for categorization decision."""
@@ -68,10 +81,17 @@ class LLMCategorizer:
     def _initialize_client(self) -> None:
         """Initialize the LLM client."""
         if self.provider == "openai":
-            import openai
+            if not HAS_OPENAI:
+                raise ImportError(
+                    "OpenAI package not installed. Install with: pip install openai"
+                )
             self.client = openai.OpenAI(api_key=self.api_key)
         else:
-            import google.generativeai as genai
+            if not HAS_GEMINI:
+                raise ImportError(
+                    "Google Generative AI package not installed. "
+                    "Install with: pip install google-generativeai"
+                )
             genai.configure(api_key=self.api_key)
             self.client = genai.GenerativeModel(self.model)
     

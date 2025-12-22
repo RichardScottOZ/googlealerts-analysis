@@ -10,6 +10,13 @@ import os
 import sys
 from pathlib import Path
 
+# Conditional import for dotenv (may not be installed yet)
+try:
+    from dotenv import load_dotenv
+    HAS_DOTENV = True
+except ImportError:
+    HAS_DOTENV = False
+
 
 def print_header(text):
     """Print a formatted header."""
@@ -114,8 +121,11 @@ def validate_setup():
     # Check environment variables (if .env exists)
     if has_env:
         print_header("Environment Variables")
-        from dotenv import load_dotenv
-        load_dotenv()
+        if HAS_DOTENV:
+            load_dotenv()
+        else:
+            print("  ⚠️  Warning: python-dotenv not installed, cannot load .env file")
+            print("  💡 Tip: Run 'pip install python-dotenv'")
         
         has_openai = check_environment_variable("OPENAI_API_KEY", required=False)
         has_gemini = check_environment_variable("GEMINI_API_KEY", required=False)
