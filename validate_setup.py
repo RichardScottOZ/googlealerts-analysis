@@ -129,10 +129,11 @@ def validate_setup():
         
         has_openai = check_environment_variable("OPENAI_API_KEY", required=False)
         has_gemini = check_environment_variable("GEMINI_API_KEY", required=False)
+        has_openrouter = check_environment_variable("OPENROUTER_API_KEY", required=False)
         
-        if not has_openai and not has_gemini:
+        if not has_openai and not has_gemini and not has_openrouter:
             print("  ⚠️  Warning: No LLM API key configured")
-            issues.append("Set either OPENAI_API_KEY or GEMINI_API_KEY in .env")
+            issues.append("Set either OPENAI_API_KEY, GEMINI_API_KEY, or OPENROUTER_API_KEY in .env")
         
         check_environment_variable("LLM_PROVIDER", required=False)
         check_environment_variable("LLM_MODEL", required=False)

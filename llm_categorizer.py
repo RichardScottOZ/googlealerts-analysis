@@ -1,7 +1,7 @@
 """
 LLM Categorizer Module
 
-This module uses LLMs (OpenAI GPT or Google Gemini) to categorize Google Alerts
+This module uses LLMs (OpenAI GPT, Google Gemini, or OpenRouter) to categorize Google Alerts
 and determine if they are relevant to the mineral-exploration-machine-learning repository.
 """
 
@@ -39,7 +39,7 @@ class LLMCategorizer:
     
     def __init__(
         self,
-        provider: Literal["openai", "gemini"] = "openai",
+        provider: Literal["openai", "gemini", "openrouter"] = "openai",
         model: str = None,
         api_key: str = None
     ):
@@ -47,8 +47,8 @@ class LLMCategorizer:
         Initialize LLM Categorizer.
         
         Args:
-            provider: LLM provider (openai or gemini)
-            model: Model name (e.g., gpt-4o-mini, gemini-1.5-flash)
+            provider: LLM provider (openai, gemini, or openrouter)
+            model: Model name (e.g., gpt-4o-mini, gemini-1.5-flash, anthropic/claude-3.5-sonnet)
             api_key: API key for the provider
         """
         self.provider = provider
@@ -58,8 +58,10 @@ class LLMCategorizer:
         if model is None:
             if provider == "openai":
                 self.model = "gpt-4o-mini"
-            else:
+            elif provider == "gemini":
                 self.model = "gemini-1.5-flash"
+            else:  # openrouter
+                self.model = "openai/gpt-4o-mini"
         else:
             self.model = model
         
@@ -72,10 +74,15 @@ class LLMCategorizer:
             if not key:
                 raise ValueError("OPENAI_API_KEY not found in environment")
             return key
-        else:
+        elif self.provider == "gemini":
             key = os.getenv('GEMINI_API_KEY')
             if not key:
                 raise ValueError("GEMINI_API_KEY not found in environment")
+            return key
+        else:  # openrouter
+            key = os.getenv('OPENROUTER_API_KEY')
+            if not key:
+                raise ValueError("OPENROUTER_API_KEY not found in environment")
             return key
     
     def _initialize_client(self) -> None:
@@ -86,7 +93,7 @@ class LLMCategorizer:
                     "OpenAI package not installed. Install with: pip install openai"
                 )
             self.client = openai.OpenAI(api_key=self.api_key)
-        else:
+        elif self.provider == "gemini":
             if not HAS_GEMINI:
                 raise ImportError(
                     "Google Generative AI package not installed. "
@@ -94,6 +101,16 @@ class LLMCategorizer:
                 )
             genai.configure(api_key=self.api_key)
             self.client = genai.GenerativeModel(self.model)
+        else:  # openrouter
+            if not HAS_OPENAI:
+                raise ImportError(
+                    "OpenAI package required for OpenRouter. Install with: pip install openai"
+                )
+            # OpenRouter uses OpenAI-compatible API
+            self.client = openai.OpenAI(
+                api_key=self.api_key,
+                base_url="https://openrouter.ai/api/v1"
+            )
     
     def categorize_alert(self, alert_data: Dict[str, Any]) -> CategoryDecision:
         """
@@ -110,8 +127,10 @@ class LLMCategorizer:
         try:
             if self.provider == "openai":
                 response = self._call_openai(prompt)
-            else:
+            elif self.provider == "gemini":
                 response = self._call_gemini(prompt)
+            else:  # openrouter
+                response = self._call_openrouter(prompt)
             
             return self._parse_response(response)
             
@@ -195,6 +214,19 @@ Respond in JSON format:
             }
         )
         return response.text
+    
+    def _call_openrouter(self, prompt: str) -> str:
+        """Call OpenRouter API."""
+        response = self.client.chat.completions.create(
+            model=self.model,
+            messages=[
+                {"role": "system", "content": "You are an expert in mineral exploration and machine learning. Respond only with valid JSON."},
+                {"role": "user", "content": prompt}
+            ],
+            temperature=0.3,
+            response_format={"type": "json_object"}
+        )
+        return response.choices[0].message.content
     
     def _parse_response(self, response_text: str) -> CategoryDecision:
         """Parse LLM response into CategoryDecision."""

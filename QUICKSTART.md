@@ -21,7 +21,7 @@ This will:
 ### Prerequisites
 - Python 3.8+
 - Gmail account with Google Alerts
-- OpenAI or Gemini API key
+- OpenAI, Gemini, or OpenRouter API key
 
 ### 5-Minute Setup
 
@@ -36,11 +36,16 @@ cp .env.example .env
 nano .env  # or use your favorite editor
 ```
 
-Add your OpenAI API key:
+Add your OpenAI API key (or Gemini/OpenRouter):
 ```env
 OPENAI_API_KEY=sk-proj-xxxxx
 LLM_PROVIDER=openai
 LLM_MODEL=gpt-4o-mini
+
+# Or for OpenRouter:
+# OPENROUTER_API_KEY=sk-or-xxxxx
+# LLM_PROVIDER=openrouter
+# LLM_MODEL=anthropic/claude-3.5-sonnet
 ```
 
 **3. Set up Gmail API:**
@@ -69,6 +74,9 @@ python analyze_alerts.py --days 14
 
 # Use Gemini instead of OpenAI
 python analyze_alerts.py --provider gemini
+
+# Use OpenRouter with multiple model options
+python analyze_alerts.py --provider openrouter --model anthropic/claude-3.5-sonnet
 
 # Generate JSON report
 python analyze_alerts.py --format json --output results.json

@@ -67,6 +67,21 @@ pip install -r requirements.txt
 4. Create or select a project
 5. Copy the API key
 
+#### Option C: OpenRouter (Access to multiple models)
+
+1. Go to [OpenRouter](https://openrouter.ai/)
+2. Sign up or log in
+3. Navigate to [Keys](https://openrouter.ai/keys)
+4. Click "Create Key"
+5. Copy the API key
+6. Add credits to your account
+
+OpenRouter provides access to many models including:
+- GPT-4, GPT-4o, GPT-4o-mini (OpenAI)
+- Claude 3.5 Sonnet, Claude 3 Opus (Anthropic)
+- Llama 3.1 70B, 405B (Meta)
+- And many more open-source models
+
 ### 4. Configure Environment Variables
 
 1. Copy the example environment file:
@@ -88,6 +103,15 @@ For Gemini:
 GEMINI_API_KEY=AIzaxxxxxxxxxxxxx
 LLM_PROVIDER=gemini
 LLM_MODEL=gemini-1.5-flash
+```
+
+For OpenRouter:
+```env
+OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxxx
+LLM_PROVIDER=openrouter
+LLM_MODEL=openai/gpt-4o-mini
+# Or try: anthropic/claude-3.5-sonnet, meta-llama/llama-3.1-70b-instruct
+```
 ```
 
 3. Adjust other settings:

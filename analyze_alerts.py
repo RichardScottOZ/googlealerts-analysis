@@ -208,7 +208,7 @@ def main():
     )
     parser.add_argument(
         '--provider',
-        choices=['openai', 'gemini'],
+        choices=['openai', 'gemini', 'openrouter'],
         default=None,
         help='LLM provider (default: from .env or openai)'
     )
@@ -216,7 +216,7 @@ def main():
         '--model',
         type=str,
         default=None,
-        help='LLM model name (default: gpt-4o-mini for OpenAI, gemini-1.5-flash for Gemini)'
+        help='LLM model name (default: gpt-4o-mini for OpenAI, gemini-1.5-flash for Gemini, openai/gpt-4o-mini for OpenRouter)'
     )
     parser.add_argument(
         '--days',

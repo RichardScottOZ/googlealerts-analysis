@@ -13,6 +13,7 @@
 - **Multi-LLM Support**: 
   - OpenAI GPT-4, GPT-4o, GPT-4o-mini
   - Google Gemini 1.5 Flash, Gemini 1.5 Pro
+  - OpenRouter (access to Claude, Llama, and 100+ models)
 - **Intelligent Categorization**: Determines relevance to mineral exploration ML
 - **Confidence Scoring**: Provides 0.0-1.0 confidence for each decision
 - **Smart Reasoning**: Explains why content is relevant or not
@@ -36,7 +37,7 @@
 ### ⚙️ Configuration
 - **Environment Variables**: Configure via .env file
 - **Command-Line Options**: Override settings on the fly
-- **Flexible API Keys**: Use OpenAI, Gemini, or both
+- **Flexible API Keys**: Use OpenAI, Gemini, OpenRouter, or mix them
 - **Adjustable Parameters**:
   - Days to search back
   - Maximum emails to process
