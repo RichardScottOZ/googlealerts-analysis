@@ -162,20 +162,35 @@ class AlertAnalyzer:
         if relevant_results:
             for i, result in enumerate(relevant_results, 1):
                 alert = result['alert']
-                decision = result['decision']
+                decision_data = result['decision']
+                decision = CategoryDecision(**decision_data)
                 
                 report_lines.extend([
                     f"### {i}. {alert['alert_query']}",
                     "",
-                    f"**Category:** {decision['category']}",
-                    f"**Confidence:** {decision['confidence']:.2f}",
+                    f"**Category:** {decision.category}",
+                    f"**Confidence:** {decision.confidence:.2f}",
                     f"**Date:** {alert['date']}",
                     "",
-                    f"**Summary:** {decision['summary']}",
+                    f"**Summary:** {decision.summary}",
+                    ""
+                ])
+
+                if decision.article_summaries:
+                    report_lines.append("**Article Summaries:**")
+                    for article_summary in decision.article_summaries:
+                        title = article_summary.get('title', '').strip()
+                        summary = article_summary.get('summary', '').strip()
+                        url = article_summary.get('url', '').strip()
+                        display_title = f"{title}: " if title else ""
+                        url_suffix = f" ({url})" if url else ""
+                        report_lines.append(f"- {display_title}{summary}{url_suffix}")
+                    report_lines.append("")
+
+                report_lines.extend([
+                    f"**Keywords:** {', '.join(decision.keywords)}",
                     "",
-                    f"**Keywords:** {', '.join(decision['keywords'])}",
-                    "",
-                    f"**Reasoning:** {decision['reasoning']}",
+                    f"**Reasoning:** {decision.reasoning}",
                     "",
                     "**Articles:**",
                     ""

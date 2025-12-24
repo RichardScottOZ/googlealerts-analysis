@@ -7,7 +7,7 @@ and determine if they are relevant to the mineral-exploration-machine-learning r
 
 import os
 from typing import List, Dict, Any, Literal
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 import json
 
 # Optional imports - these will be imported dynamically based on provider
@@ -32,6 +32,7 @@ class CategoryDecision(BaseModel):
     reasoning: str
     summary: str
     keywords: List[str]
+    article_summaries: List[Dict[str, str]] = Field(default_factory=list)
 
 
 class LLMCategorizer:
@@ -176,8 +177,9 @@ Analyze these articles and provide:
 2. Confidence level (0.0 to 1.0)
 3. Category (e.g., "Machine Learning - Exploration", "Remote Sensing", "Geophysics", "Mining Technology", "Not Relevant")
 4. Brief reasoning for your decision
-5. A one-sentence summary of the alert content
+5. A one-sentence summary of the overall alert content
 6. Key keywords (2-5 words)
+7. For each article listed above, provide a one-sentence summary with the article title and URL in an array named "article_summaries".
 
 Respond in JSON format:
 {{
@@ -186,7 +188,11 @@ Respond in JSON format:
     "category": "string",
     "reasoning": "string",
     "summary": "string",
-    "keywords": ["keyword1", "keyword2", ...]
+    "keywords": ["keyword1", "keyword2", ...],
+    "article_summaries": [
+        {{"title": "string", "summary": "string", "url": "string"}},
+        ...
+    ]
 }}"""
         
         return prompt
