@@ -1,0 +1,78 @@
+name: Google Alerts Analysis
+
+# This is a template workflow for automated analysis
+# Uncomment and configure to enable automated runs
+
+# on:
+#   schedule:
+#     # Run every Monday at 9 AM UTC
+#     - cron: '0 9 * * 1'
+#   workflow_dispatch:  # Allow manual triggers
+
+# Note: This workflow requires GitHub Secrets to be configured:
+# - OPENAI_API_KEY or GEMINI_API_KEY
+# - GMAIL_CREDENTIALS_JSON (base64 encoded credentials.json)
+# - GMAIL_TOKEN_PICKLE (base64 encoded token.pickle, after first auth)
+
+jobs:
+  analyze-alerts:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.11'
+    
+    - name: Install dependencies
+      run: |
+        pip install -r requirements.txt
+    
+    # - name: Decode Gmail credentials
+    #   run: |
+    #     echo "${{ secrets.GMAIL_CREDENTIALS_JSON }}" | base64 -d > credentials.json
+    #     echo "${{ secrets.GMAIL_TOKEN_PICKLE }}" | base64 -d > token.pickle
+    
+    # - name: Run analysis
+    #   env:
+    #     OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+    #     LLM_PROVIDER: openai
+    #     LLM_MODEL: gpt-4o-mini
+    #     DAYS_BACK: 7
+    #     MAX_EMAILS_TO_PROCESS: 20
+    #   run: |
+    #     python analyze_alerts.py --output report-${{ github.run_number }}.md
+    
+    # - name: Upload report
+    #   uses: actions/upload-artifact@v4
+    #   with:
+    #     name: google-alerts-report
+    #     path: report-*.md
+    
+    # Optional: Commit report back to repo
+    # - name: Commit report
+    #   run: |
+    #     git config user.name "GitHub Actions Bot"
+    #     git config user.email "actions@github.com"
+    #     git add report-*.md
+    #     git commit -m "Add Google Alerts analysis report" || echo "No changes"
+    #     git push
+
+# Setup Instructions:
+# 1. Uncomment the 'on:' trigger section at the top
+# 2. Run the analysis locally once to generate token.pickle
+# 3. Encode credentials and token:
+#    base64 credentials.json > credentials.b64
+#    base64 token.pickle > token.b64
+# 4. Add GitHub Secrets in repository settings:
+#    - Go to Settings > Secrets and variables > Actions
+#    - Add OPENAI_API_KEY (or GEMINI_API_KEY)
+#    - Add GMAIL_CREDENTIALS_JSON (content of credentials.b64)
+#    - Add GMAIL_TOKEN_PICKLE (content of token.b64)
+# 5. Uncomment the workflow steps above
+# 6. Commit and push this file
+#
+# Note: OAuth tokens expire. You may need to refresh token.pickle periodically.
