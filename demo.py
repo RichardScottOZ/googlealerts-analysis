@@ -112,6 +112,11 @@ def generate_demo_report():
             'days_back': 7,
             'max_emails': 10
         },
+        'statistics': {
+            'total': 15,
+            'unread': 5,
+            'read': 10
+        },
         'total_alerts': len(alerts),
         'relevant_alerts': sum(1 for d in decisions if d.is_relevant),
         'results': results
@@ -129,9 +134,15 @@ def generate_demo_markdown_report(analysis_result):
         f"**LLM Provider:** {analysis_result['configuration']['llm_provider']}",
         f"**Period:** Last {analysis_result['configuration']['days_back']} days",
         "",
-        "## Summary",
+        "## Email Statistics",
         "",
-        f"- **Total Alerts Processed:** {analysis_result['total_alerts']}",
+        f"- **Total Google Alerts (in period):** {analysis_result['statistics']['total']}",
+        f"- **Unread:** {analysis_result['statistics']['unread']}",
+        f"- **Read:** {analysis_result['statistics']['read']}",
+        "",
+        "## Analysis Summary",
+        "",
+        f"- **Alerts Processed:** {analysis_result['total_alerts']}",
         f"- **Relevant to mineral-exploration-machine-learning:** {analysis_result['relevant_alerts']}",
         f"- **Relevance Rate:** {(analysis_result['relevant_alerts'] / max(analysis_result['total_alerts'], 1) * 100):.1f}%",
         "",

@@ -52,6 +52,14 @@ class AlertAnalyzer:
         """
         print(f"🔍 Fetching Google Alerts from the last {self.days_back} days...")
         
+        # Get alert statistics
+        stats = self.gmail_fetcher.get_alert_statistics(days_back=self.days_back)
+        print(f"📊 Google Alerts statistics (last {self.days_back} days):")
+        print(f"   Total: {stats['total']}")
+        print(f"   Unread: {stats['unread']}")
+        print(f"   Read: {stats['read']}")
+        print()
+        
         # Fetch alerts from Gmail
         alerts = self.gmail_fetcher.fetch_google_alerts(
             days_back=self.days_back,
@@ -64,10 +72,11 @@ class AlertAnalyzer:
                 'timestamp': datetime.now().isoformat(),
                 'total_alerts': 0,
                 'relevant_alerts': 0,
+                'statistics': stats,
                 'results': []
             }
         
-        print(f"✅ Found {len(alerts)} Google Alerts\n")
+        print(f"✅ Processing {len(alerts)} Google Alerts\n")
         
         # Categorize alerts
         print(f"🤖 Categorizing alerts using {self.categorizer.provider} ({self.categorizer.model})...\n")
@@ -101,6 +110,7 @@ class AlertAnalyzer:
                 'days_back': self.days_back,
                 'max_emails': self.max_emails
             },
+            'statistics': stats,
             'total_alerts': len(alerts),
             'relevant_alerts': relevant_count,
             'results': results
@@ -130,9 +140,15 @@ class AlertAnalyzer:
             f"**LLM Provider:** {analysis_result['configuration']['llm_provider']} ({analysis_result['configuration']['llm_model']})",
             f"**Period:** Last {analysis_result['configuration']['days_back']} days",
             "",
-            "## Summary",
+            "## Email Statistics",
             "",
-            f"- **Total Alerts Processed:** {analysis_result['total_alerts']}",
+            f"- **Total Google Alerts (in period):** {analysis_result['statistics']['total']}",
+            f"- **Unread:** {analysis_result['statistics']['unread']}",
+            f"- **Read:** {analysis_result['statistics']['read']}",
+            "",
+            "## Analysis Summary",
+            "",
+            f"- **Alerts Processed:** {analysis_result['total_alerts']}",
             f"- **Relevant to mineral-exploration-machine-learning:** {analysis_result['relevant_alerts']}",
             f"- **Relevance Rate:** {(analysis_result['relevant_alerts'] / max(analysis_result['total_alerts'], 1) * 100):.1f}%",
             "",

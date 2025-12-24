@@ -65,6 +65,61 @@ class GmailAlertFetcher:
         
         self.service = build('gmail', 'v1', credentials=creds)
         
+    def get_alert_statistics(self, days_back: int = None) -> Dict[str, int]:
+        """
+        Get statistics about Google Alert emails.
+        
+        Args:
+            days_back: Number of days to search back (None for all time)
+            
+        Returns:
+            Dictionary with total count and unread count
+        """
+        if not self.service:
+            self.authenticate()
+        
+        # Build query for Google Alerts emails
+        base_query = 'from:googlealerts-noreply@google.com'
+        
+        if days_back:
+            search_date = datetime.now() - timedelta(days=days_back)
+            date_str = search_date.strftime('%Y/%m/%d')
+            base_query += f' after:{date_str}'
+        
+        try:
+            # Get total count
+            total_results = self.service.users().messages().list(
+                userId='me',
+                q=base_query,
+                maxResults=1  # We just need the count
+            ).execute()
+            
+            total_count = total_results.get('resultSizeEstimate', 0)
+            
+            # Get unread count
+            unread_query = base_query + ' is:unread'
+            unread_results = self.service.users().messages().list(
+                userId='me',
+                q=unread_query,
+                maxResults=1  # We just need the count
+            ).execute()
+            
+            unread_count = unread_results.get('resultSizeEstimate', 0)
+            
+            return {
+                'total': total_count,
+                'unread': unread_count,
+                'read': total_count - unread_count
+            }
+            
+        except Exception as e:
+            print(f"Error getting alert statistics: {e}")
+            return {
+                'total': 0,
+                'unread': 0,
+                'read': 0
+            }
+    
     def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10) -> List[Dict[str, Any]]:
         """
         Fetch Google Alerts emails from Gmail.
