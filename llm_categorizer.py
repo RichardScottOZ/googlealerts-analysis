@@ -179,7 +179,7 @@ Analyze these articles and provide:
 4. Brief reasoning for your decision
 5. A one-sentence summary of the overall alert content
 6. Key keywords (2-5 words)
-7. For EACH article above, produce a one-sentence summary and include the article URL (use the provided URL) as a JSON object inside an array named "article_summaries".
+7. For EACH article above, provide a one-sentence summary with the article title and URL in an array named "article_summaries".
 
 Respond in JSON format:
 {{

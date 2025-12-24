@@ -182,10 +182,8 @@ class AlertAnalyzer:
                         summary = article_summary.get('summary', '').strip()
                         url = article_summary.get('url', '').strip()
                         display_title = f"{title}: " if title else ""
-                        if url:
-                            report_lines.append(f"- {display_title}{summary} ({url})")
-                        else:
-                            report_lines.append(f"- {display_title}{summary}")
+                        url_suffix = f" ({url})" if url else ""
+                        report_lines.append(f"- {display_title}{summary}{url_suffix}")
                     report_lines.append("")
 
                 report_lines.extend([
