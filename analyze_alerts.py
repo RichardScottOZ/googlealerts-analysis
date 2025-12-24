@@ -172,6 +172,23 @@ class AlertAnalyzer:
                     f"**Date:** {alert['date']}",
                     "",
                     f"**Summary:** {decision['summary']}",
+                    ""
+                ])
+
+                if decision.get('article_summaries'):
+                    report_lines.append("**Article Summaries:**")
+                    for article_summary in decision['article_summaries']:
+                        title = article_summary.get('title', '').strip()
+                        summary = article_summary.get('summary', '').strip()
+                        url = article_summary.get('url', '').strip()
+                        display_title = f"{title}: " if title else ""
+                        if url:
+                            report_lines.append(f"- {display_title}{summary} ({url})")
+                        else:
+                            report_lines.append(f"- {display_title}{summary}")
+                    report_lines.append("")
+
+                report_lines.extend([
                     "",
                     f"**Keywords:** {', '.join(decision['keywords'])}",
                     "",

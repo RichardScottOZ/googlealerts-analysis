@@ -115,6 +115,33 @@ def test_keywords_list():
     print("✅ Keywords list test passed")
 
 
+def test_article_summaries():
+    """Test that article summaries can be captured and default to an empty list."""
+    decision_default = CategoryDecision(
+        is_relevant=True,
+        confidence=0.7,
+        category="Test",
+        reasoning="Test",
+        summary="Test",
+        keywords=[]
+    )
+    assert decision_default.article_summaries == []
+
+    summaries = [{"title": "A", "summary": "Short summary", "url": "https://example.com"}]
+    decision_with_data = CategoryDecision(
+        is_relevant=True,
+        confidence=0.9,
+        category="Test",
+        reasoning="Test",
+        summary="Test",
+        keywords=[],
+        article_summaries=summaries
+    )
+    assert decision_with_data.article_summaries == summaries
+
+    print("✅ Article summaries test passed")
+
+
 def run_all_tests():
     """Run all tests."""
     print("=" * 60)
@@ -128,6 +155,7 @@ def run_all_tests():
         test_alert_data_structure()
         test_confidence_bounds()
         test_keywords_list()
+        test_article_summaries()
         
         print()
         print("=" * 60)
