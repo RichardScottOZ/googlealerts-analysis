@@ -69,11 +69,15 @@ class GmailAlertFetcher:
         """
         Get statistics about Google Alert emails.
         
+        Note: Uses Gmail API's resultSizeEstimate which provides an approximate count.
+        For very large mailboxes, the count may not be exact but is sufficient for
+        general inbox visibility.
+        
         Args:
             days_back: Number of days to search back (None for all time)
             
         Returns:
-            Dictionary with total count and unread count
+            Dictionary with 'total', 'unread', and 'read' counts (approximate)
         """
         if not self.service:
             self.authenticate()
