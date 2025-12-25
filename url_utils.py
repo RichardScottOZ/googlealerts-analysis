@@ -7,7 +7,7 @@ This module has no external dependencies beyond Python standard library.
 
 import re
 from urllib.parse import unquote, urlparse, parse_qs
-from typing import Optional, List
+from typing import List
 
 
 # Domains to exclude when extracting article URLs from emails
