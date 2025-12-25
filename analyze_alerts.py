@@ -85,6 +85,16 @@ class AlertAnalyzer:
         for i, alert in enumerate(alerts, 1):
             print(f"[{i}/{len(alerts)}] Processing: {alert['alert_query'][:50]}...")
             
+            # Log articles found in the alert
+            articles = alert.get('articles', [])
+            if articles:
+                print(f"  📰 Found {len(articles)} article(s) in alert:")
+                for j, article in enumerate(articles, 1):
+                    title = article.get('title', 'No title')
+                    url = article.get('url', 'No URL')
+                    print(f"     {j}. {title[:60]}")
+                    print(f"        URL: {url[:80]}")
+            
             decision = self.categorizer.categorize_alert(alert)
             
             result = {
@@ -98,7 +108,16 @@ class AlertAnalyzer:
             print(f"  {relevance_icon} Relevant: {decision.is_relevant} (confidence: {decision.confidence:.2f})")
             print(f"  📊 Articles: {decision.relevant_article_count}/{decision.total_article_count} relevant")
             print(f"  📁 Category: {decision.category}")
-            print(f"  📝 Summary: {decision.summary}\n")
+            print(f"  📝 Summary: {decision.summary}")
+            
+            # Log analyzed articles with relevance status
+            if decision.articles:
+                print(f"  📋 Article Analysis:")
+                for j, analyzed_article in enumerate(decision.articles, 1):
+                    article_icon = "✅" if analyzed_article.is_relevant else "❌"
+                    print(f"     {j}. {article_icon} {analyzed_article.title[:60]}")
+                    print(f"        {analyzed_article.url[:80]}")
+            print()  # Empty line between alerts
         
         # Compile final results
         relevant_count = sum(1 for r in results if r['decision']['is_relevant'])
