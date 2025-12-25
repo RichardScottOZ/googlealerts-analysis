@@ -253,8 +253,13 @@ class GmailAlertFetcher:
             # HTML parsing - extract links and titles
             link_pattern = r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]+)</a>'
             matches = re.findall(link_pattern, body)
+            
+            # Filter out non-article links (social media, google actions, etc.)
+            exclude_domains = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
+            
             for url, title in matches:
-                if url.startswith('http') and 'google' not in url.lower():
+                # Check if URL is an article link
+                if url.startswith('http') and not any(domain in url.lower() for domain in exclude_domains):
                     articles.append({
                         'title': title.strip(),
                         'url': url,
@@ -263,8 +268,9 @@ class GmailAlertFetcher:
         
         # Fallback: use plain URLs found
         if not articles:
+            exclude_domains = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
             for url in urls:
-                if 'google' not in url.lower():
+                if not any(domain in url.lower() for domain in exclude_domains):
                     articles.append({
                         'title': '',
                         'url': url,

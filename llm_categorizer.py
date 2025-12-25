@@ -179,7 +179,9 @@ Analyze these articles and provide:
 4. Brief reasoning for your decision
 5. A one-sentence summary of the overall alert content
 6. Key keywords (2-5 words)
-7. For each article listed above, provide a one-sentence summary with the article title and URL in an array named "article_summaries".
+7. For each article listed above, provide a brief one-sentence summary based on the title. Use the EXACT title and URL provided above - do not modify or invent URLs. If an article has no URL or shows 'N/A', omit it from article_summaries.
+
+IMPORTANT: Use the exact URLs provided in the article list above. Do not generate, modify, or invent URLs like "example.com" or any other placeholder URLs.
 
 Respond in JSON format:
 {{
@@ -190,7 +192,7 @@ Respond in JSON format:
     "summary": "string",
     "keywords": ["keyword1", "keyword2", ...],
     "article_summaries": [
-        {{"title": "string", "summary": "string", "url": "string"}},
+        {{"title": "exact title from above", "summary": "one-sentence summary", "url": "exact URL from above"}},
         ...
     ]
 }}"""
