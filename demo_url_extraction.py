@@ -5,6 +5,9 @@ This demonstrates:
 1. Extraction of actual URLs from Google redirect URLs
 2. Article-level logging during processing
 3. JSON output with complete article information
+
+Note: This demo duplicates some logic from gmail_fetcher.py to avoid
+requiring Google API libraries which may not be installed.
 """
 
 import json
@@ -15,6 +18,8 @@ from urllib.parse import unquote, urlparse, parse_qs
 def extract_actual_url(url: str) -> str:
     """
     Extract the actual URL from a Google redirect URL.
+    
+    This is the same logic as GmailAlertFetcher._extract_actual_url()
     
     Google Alert emails use redirect URLs like:
     https://www.google.com/url?...&url=<actual_url>&...
@@ -48,7 +53,11 @@ def extract_actual_url(url: str) -> str:
 
 
 def extract_alert_info(body: str, subject: str):
-    """Extract alert information from email body."""
+    """
+    Extract alert information from email body.
+    
+    This is a simplified version of GmailAlertFetcher._extract_alert_info()
+    """
     EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
     
     # Extract alert query from subject
