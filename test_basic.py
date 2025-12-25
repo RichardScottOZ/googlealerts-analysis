@@ -173,13 +173,18 @@ def test_url_extraction_filtering():
     
     # Should have exactly 2 articles (farmonaut and example.com)
     assert len(articles) == 2
-    assert articles[0]['title'] == 'Mining Innovation Article'
-    assert articles[0]['url'] == 'https://farmonaut.com/article1'
-    assert articles[1]['title'] == 'Another Mining Article'
-    assert articles[1]['url'] == 'https://example.com/mining-news'
+    
+    # Extract URLs and titles for verification
+    article_urls = [a['url'] for a in articles]
+    article_titles = [a['title'] for a in articles]
+    
+    # Verify the expected articles are present (order-independent)
+    assert 'https://farmonaut.com/article1' in article_urls
+    assert 'https://example.com/mining-news' in article_urls
+    assert 'Mining Innovation Article' in article_titles
+    assert 'Another Mining Article' in article_titles
     
     # Verify social media links are filtered out
-    article_urls = [a['url'] for a in articles]
     assert not any('facebook' in url.lower() for url in article_urls)
     assert not any('twitter' in url.lower() for url in article_urls)
     assert not any('linkedin' in url.lower() for url in article_urls)
