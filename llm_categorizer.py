@@ -24,15 +24,27 @@ except ImportError:
     HAS_GEMINI = False
 
 
+class ArticleAnalysis(BaseModel):
+    """Model for per-article analysis."""
+    title: str
+    url: str
+    summary: str
+    is_relevant: bool
+    relevance_reasoning: str = ""
+
+
 class CategoryDecision(BaseModel):
     """Model for categorization decision."""
-    is_relevant: bool
-    confidence: float  # 0.0 to 1.0
+    is_relevant: bool  # True if any article is relevant
+    confidence: float  # 0.0 to 1.0 - average of relevant article confidences
     category: str
     reasoning: str
-    summary: str
+    summary: str  # Summary of the overall alert
     keywords: List[str]
-    article_summaries: List[Dict[str, str]] = Field(default_factory=list)
+    article_summaries: List[Dict[str, str]] = Field(default_factory=list)  # Deprecated, kept for backward compatibility
+    articles: List[ArticleAnalysis] = Field(default_factory=list)  # New per-article analysis
+    relevant_article_count: int = 0
+    total_article_count: int = 0
 
 
 class LLMCategorizer:
@@ -149,13 +161,20 @@ class LLMCategorizer:
     def _build_categorization_prompt(self, alert_data: Dict[str, Any]) -> str:
         """Build the prompt for LLM categorization."""
         articles_text = ""
-        for i, article in enumerate(alert_data.get('articles', []), 1):
-            articles_text += f"\n{i}. Title: {article.get('title', 'N/A')}\n"
-            articles_text += f"   URL: {article.get('url', 'N/A')}\n"
+        article_count = 0
+        for article in alert_data.get('articles', []):
+            url = article.get('url', '')
+            # Skip articles without URLs
+            if not url or url == 'N/A':
+                continue
+            article_count += 1
+            title = article.get('title', '') or 'N/A'
+            articles_text += f"\n{article_count}. Title: {title}\n"
+            articles_text += f"   URL: {url}\n"
             if article.get('snippet'):
                 articles_text += f"   Snippet: {article.get('snippet', '')}\n"
         
-        prompt = f"""You are an expert in mineral exploration and machine learning. Your task is to analyze Google Alert articles and determine if they are relevant to a GitHub repository about machine learning applications in mineral exploration.
+        prompt = f"""You are an expert in mineral exploration and machine learning. Your task is to analyze EACH article in this Google Alert INDIVIDUALLY and determine if it is relevant to a GitHub repository about machine learning applications in mineral exploration.
 
 The repository (https://github.com/RichardScottOZ/mineral-exploration-machine-learning) focuses on:
 - Machine learning techniques applied to mineral exploration
@@ -172,33 +191,42 @@ Date: {alert_data.get('date', 'Unknown')}
 Articles in this alert:
 {articles_text}
 
-Analyze these articles and provide:
-1. Is this relevant to the mineral-exploration-machine-learning repository? (true/false)
-2. Confidence level (0.0 to 1.0)
-3. Category (e.g., "Machine Learning - Exploration", "Remote Sensing", "Geophysics", "Mining Technology", "Not Relevant")
-4. Brief reasoning for your decision
-5. A one-sentence summary of the overall alert content
-6. Key keywords (2-5 words)
-7. For each article listed above, provide a brief one-sentence summary. Use the EXACT URL provided above - do not modify or invent URLs. If an article has a title, use it; if not, infer a descriptive title from the URL. If an article has no URL (shows 'N/A', is empty, or is null), omit it from article_summaries.
+CRITICAL INSTRUCTIONS:
+1. Analyze EACH article individually - do NOT summarize the entire alert email
+2. For EACH article, determine if it is relevant to the repository topic
+3. The overall alert is only relevant if at least ONE article is relevant
+4. You MUST analyze the actual article content/title/URL - not the alert email itself
+5. Use the EXACT URLs provided - do not modify or invent URLs
+6. If a title is missing, create a brief descriptive title based on the URL or snippet
+7. Skip articles that have no valid URL
 
-IMPORTANT: 
-- Use the exact URLs provided in the article list above. Do not generate, modify, or invent URLs.
-- If a title is missing (shows 'N/A', is empty, or is null), create a brief descriptive title based on the URL or snippet.
-- If a URL is missing (shows 'N/A', is empty, or is null), skip that article entirely from article_summaries.
-- Ensure every article summary includes both title and URL so users can identify and access the article.
+For each article, provide:
+- The exact title (or inferred title if missing)
+- The exact URL from the list above
+- A one-sentence summary of what the article is about
+- Whether it is relevant (true/false) to ML in mineral exploration
+- Brief reasoning for the relevance decision
 
 Respond in JSON format:
 {{
-    "is_relevant": boolean,
-    "confidence": float,
-    "category": "string",
-    "reasoning": "string",
-    "summary": "string",
-    "keywords": ["keyword1", "keyword2", ...],
-    "article_summaries": [
-        {{"title": "exact title or inferred title", "summary": "one-sentence summary", "url": "exact URL from above"}},
+    "articles": [
+        {{
+            "title": "exact or inferred title",
+            "url": "exact URL from above",
+            "summary": "one-sentence summary of article content",
+            "is_relevant": true/false,
+            "relevance_reasoning": "brief explanation of why relevant or not"
+        }},
         ...
-    ]
+    ],
+    "relevant_article_count": number of relevant articles,
+    "total_article_count": total number of articles analyzed,
+    "is_relevant": true if ANY article is relevant (relevant_article_count > 0),
+    "confidence": average confidence for relevant articles (0.0 to 1.0),
+    "category": "Machine Learning - Exploration" or "Remote Sensing" or "Geophysics" or "Mining Technology" or "Not Relevant",
+    "reasoning": "brief overall reasoning based on relevant articles",
+    "summary": "summary of relevant articles only (or 'No relevant articles' if none)",
+    "keywords": ["keyword1", "keyword2", ...]
 }}"""
         
         return prompt
@@ -244,7 +272,37 @@ Respond in JSON format:
         """Parse LLM response into CategoryDecision."""
         try:
             data = json.loads(response_text)
-            return CategoryDecision(**data)
+            
+            # Convert articles list to ArticleAnalysis objects
+            articles_data = data.pop('articles', [])
+            articles = []
+            for article in articles_data:
+                # Handle both old format (with is_relevant) and ensure compatibility
+                articles.append(ArticleAnalysis(
+                    title=article.get('title', ''),
+                    url=article.get('url', ''),
+                    summary=article.get('summary', ''),
+                    is_relevant=article.get('is_relevant', False),
+                    relevance_reasoning=article.get('relevance_reasoning', '')
+                ))
+            
+            # Calculate counts if not provided
+            total_count = len(articles)
+            relevant_count = sum(1 for a in articles if a.is_relevant)
+            
+            # Build the CategoryDecision with the converted articles
+            return CategoryDecision(
+                is_relevant=data.get('is_relevant', relevant_count > 0),
+                confidence=data.get('confidence', 0.0),
+                category=data.get('category', 'Unknown'),
+                reasoning=data.get('reasoning', ''),
+                summary=data.get('summary', ''),
+                keywords=data.get('keywords', []),
+                article_summaries=data.get('article_summaries', []),  # Keep for backward compatibility
+                articles=articles,
+                relevant_article_count=data.get('relevant_article_count', relevant_count),
+                total_article_count=data.get('total_article_count', total_count)
+            )
         except Exception as e:
             print(f"Error parsing response: {e}")
             print(f"Response: {response_text}")

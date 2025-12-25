@@ -5,7 +5,7 @@ Basic tests to verify core functionality without requiring API credentials.
 """
 
 import json
-from llm_categorizer import CategoryDecision
+from llm_categorizer import CategoryDecision, ArticleAnalysis
 
 
 def test_category_decision_model():
@@ -126,6 +126,9 @@ def test_article_summaries():
         keywords=[]
     )
     assert decision_default.article_summaries == []
+    assert decision_default.articles == []
+    assert decision_default.relevant_article_count == 0
+    assert decision_default.total_article_count == 0
 
     summaries = [{"title": "A", "summary": "Short summary", "url": "https://example.com"}]
     decision_with_data = CategoryDecision(
@@ -140,6 +143,76 @@ def test_article_summaries():
     assert decision_with_data.article_summaries == summaries
 
     print("✅ Article summaries test passed")
+
+
+def test_article_analysis_model():
+    """Test that ArticleAnalysis model works correctly."""
+    article = ArticleAnalysis(
+        title="ML in Mining Exploration",
+        url="https://example.com/ml-mining",
+        summary="Article about using machine learning in mineral exploration",
+        is_relevant=True,
+        relevance_reasoning="Directly relates to ML applications in mineral exploration"
+    )
+    
+    assert article.title == "ML in Mining Exploration"
+    assert article.url == "https://example.com/ml-mining"
+    assert article.is_relevant is True
+    assert "ML applications" in article.relevance_reasoning
+    
+    # Test model_dump
+    data = article.model_dump()
+    assert isinstance(data, dict)
+    assert data['is_relevant'] is True
+    
+    print("✅ ArticleAnalysis model test passed")
+
+
+def test_category_decision_with_articles():
+    """Test CategoryDecision with per-article analysis."""
+    articles = [
+        ArticleAnalysis(
+            title="ML in Mining",
+            url="https://example.com/article1",
+            summary="Article about ML in mining",
+            is_relevant=True,
+            relevance_reasoning="Relevant to ML in mineral exploration"
+        ),
+        ArticleAnalysis(
+            title="Cryptocurrency News",
+            url="https://example.com/article2",
+            summary="Bitcoin mining news",
+            is_relevant=False,
+            relevance_reasoning="Not related to mineral exploration"
+        )
+    ]
+    
+    decision = CategoryDecision(
+        is_relevant=True,
+        confidence=0.85,
+        category="Machine Learning - Exploration",
+        reasoning="One relevant article found",
+        summary="Alert contains relevant ML in mining article",
+        keywords=["ml", "mining", "exploration"],
+        articles=articles,
+        relevant_article_count=1,
+        total_article_count=2
+    )
+    
+    assert decision.is_relevant is True
+    assert decision.relevant_article_count == 1
+    assert decision.total_article_count == 2
+    assert len(decision.articles) == 2
+    assert decision.articles[0].is_relevant is True
+    assert decision.articles[1].is_relevant is False
+    
+    # Test serialization
+    data = decision.model_dump()
+    assert data['relevant_article_count'] == 1
+    assert data['total_article_count'] == 2
+    assert len(data['articles']) == 2
+    
+    print("✅ CategoryDecision with articles test passed")
 
 
 def test_url_extraction_filtering():
@@ -207,6 +280,8 @@ def run_all_tests():
         test_confidence_bounds()
         test_keywords_list()
         test_article_summaries()
+        test_article_analysis_model()
+        test_category_decision_with_articles()
         test_url_extraction_filtering()
         
         print()

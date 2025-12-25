@@ -14,7 +14,7 @@ from typing import List, Dict, Any
 from dotenv import load_dotenv
 
 from gmail_fetcher import GmailAlertFetcher
-from llm_categorizer import LLMCategorizer, CategoryDecision
+from llm_categorizer import LLMCategorizer, CategoryDecision, ArticleAnalysis
 
 
 class AlertAnalyzer:
@@ -93,9 +93,10 @@ class AlertAnalyzer:
             }
             results.append(result)
             
-            # Print summary
+            # Print summary with per-article stats
             relevance_icon = "✅" if decision.is_relevant else "❌"
             print(f"  {relevance_icon} Relevant: {decision.is_relevant} (confidence: {decision.confidence:.2f})")
+            print(f"  📊 Articles: {decision.relevant_article_count}/{decision.total_article_count} relevant")
             print(f"  📁 Category: {decision.category}")
             print(f"  📝 Summary: {decision.summary}\n")
         
@@ -117,6 +118,12 @@ class AlertAnalyzer:
         }
         
         return analysis_result
+    
+    @staticmethod
+    def _is_result_relevant(result: Dict[str, Any]) -> bool:
+        """Check if a result has at least one relevant article."""
+        decision = result.get('decision', {})
+        return decision.get('is_relevant', False) and decision.get('relevant_article_count', 0) > 0
     
     def generate_report(self, analysis_result: Dict[str, Any], output_format: str = "markdown") -> str:
         """
@@ -156,83 +163,82 @@ class AlertAnalyzer:
             ""
         ]
         
-        # Add relevant alerts
-        relevant_results = [r for r in analysis_result['results'] if r['decision']['is_relevant']]
+        # Add relevant alerts (only alerts with at least one relevant article)
+        relevant_results = [r for r in analysis_result['results'] if self._is_result_relevant(r)]
         
         if relevant_results:
             for i, result in enumerate(relevant_results, 1):
                 alert = result['alert']
                 decision_data = result['decision']
-                decision = CategoryDecision(**decision_data)
+                
+                # Get article stats
+                relevant_count = decision_data.get('relevant_article_count', 0)
+                total_count = decision_data.get('total_article_count', 0)
                 
                 report_lines.extend([
                     f"### {i}. {alert['alert_query']}",
                     "",
-                    f"**Category:** {decision.category}",
-                    f"**Confidence:** {decision.confidence:.2f}",
+                    f"**Category:** {decision_data['category']}",
+                    f"**Confidence:** {decision_data['confidence']:.2f}",
                     f"**Date:** {alert['date']}",
+                    f"**Relevant Articles:** {relevant_count}/{total_count}",
                     "",
-                    f"**Summary:** {decision.summary}",
+                    f"**Summary:** {decision_data['summary']}",
+                    "",
+                    f"**Keywords:** {', '.join(decision_data.get('keywords', []))}",
+                    "",
+                    f"**Overall Reasoning:** {decision_data['reasoning']}",
                     ""
                 ])
 
-                if decision.article_summaries:
-                    # Build summary lines first
-                    summary_lines = []
-                    for article_summary in decision.article_summaries:
-                        title = article_summary.get('title', '').strip()
-                        summary = article_summary.get('summary', '').strip()
-                        url = article_summary.get('url', '').strip()
-                        
-                        # Skip if both title and summary are empty
-                        if not title and not summary:
-                            continue
-                        
-                        # Build the line with available components
-                        parts = []
-                        if title:
-                            parts.append(title)
-                        if summary:
-                            # Add colon separator if we have both title and summary
-                            if title:
-                                parts.append(': ')
-                            parts.append(summary)
-                        if url:
-                            parts.append(f" ({url})")
-                        
-                        if parts:  # Only add if we have something to display
-                            summary_lines.append(f"- {''.join(parts)}")
+                # Display articles with per-article analysis
+                articles = decision_data.get('articles', [])
+                if articles:
+                    report_lines.append("**Articles:**")
+                    report_lines.append("")
                     
-                    # Only add the section if we have valid summaries
-                    if summary_lines:
-                        report_lines.append("**Article Summaries:**")
-                        report_lines.extend(summary_lines)
+                    for j, article in enumerate(articles, 1):
+                        title = article.get('title', 'No title')
+                        url = article.get('url', '')
+                        summary = article.get('summary', '')
+                        is_relevant = article.get('is_relevant', False)
+                        relevance_reasoning = article.get('relevance_reasoning', '')
+                        
+                        # Relevance indicator
+                        relevance_icon = "✅" if is_relevant else "❌"
+                        
+                        if url and title and title != 'No title':
+                            report_lines.append(f"{j}. {relevance_icon} [{title}]({url})")
+                        elif url:
+                            report_lines.append(f"{j}. {relevance_icon} {url}")
+                        else:
+                            report_lines.append(f"{j}. {relevance_icon} {title}")
+                        
+                        if summary:
+                            report_lines.append(f"   - **Summary:** {summary}")
+                        if relevance_reasoning:
+                            report_lines.append(f"   - **Relevance:** {relevance_reasoning}")
                         report_lines.append("")
-
-                report_lines.extend([
-                    f"**Keywords:** {', '.join(decision.keywords)}",
-                    "",
-                    f"**Reasoning:** {decision.reasoning}",
-                    "",
-                    "**Articles:**",
-                    ""
-                ])
-                
-                for j, article in enumerate(alert['articles'], 1):
-                    title = article.get('title', 'No title')
-                    url = article.get('url', '')
-                    if url and title and title != 'No title':
-                        report_lines.append(f"{j}. [{title}]({url})")
-                    elif url:
-                        report_lines.append(f"{j}. {url}")
+                else:
+                    # Fallback to raw articles from alert if no analyzed articles
+                    report_lines.append("**Articles:**")
+                    report_lines.append("")
+                    for j, article in enumerate(alert.get('articles', []), 1):
+                        title = article.get('title', 'No title')
+                        url = article.get('url', '')
+                        if url and title and title != 'No title':
+                            report_lines.append(f"{j}. [{title}]({url})")
+                        elif url:
+                            report_lines.append(f"{j}. {url}")
+                    report_lines.append("")
                 
                 report_lines.append("")
         else:
             report_lines.append("*No relevant alerts found.*")
             report_lines.append("")
         
-        # Add non-relevant alerts section
-        non_relevant_results = [r for r in analysis_result['results'] if not r['decision']['is_relevant']]
+        # Add non-relevant alerts section (alerts with no relevant articles)
+        non_relevant_results = [r for r in analysis_result['results'] if not self._is_result_relevant(r)]
         
         if non_relevant_results:
             report_lines.extend([
@@ -243,10 +249,12 @@ class AlertAnalyzer:
             for i, result in enumerate(non_relevant_results, 1):
                 alert = result['alert']
                 decision = result['decision']
+                total_count = decision.get('total_article_count', 0)
                 
                 report_lines.extend([
                     f"### {i}. {alert['alert_query']}",
                     f"**Category:** {decision['category']} | **Confidence:** {decision['confidence']:.2f}",
+                    f"**Articles Analyzed:** {total_count} (none relevant)",
                     f"**Reasoning:** {decision['reasoning']}",
                     ""
                 ])
