@@ -360,6 +360,13 @@ def main():
             f.write(report)
         
         print(f"✅ Report saved to: {args.output}")
+        
+        # Always save machine-readable JSON report
+        json_report = analyzer.generate_report(results, output_format='json')
+        with open('report.json', 'w', encoding='utf-8') as f:
+            f.write(json_report)
+        
+        print(f"✅ Machine-readable report saved to: report.json")
         print(f"\n📈 Summary: {results['relevant_alerts']}/{results['total_alerts']} alerts relevant")
         
     except FileNotFoundError as e:
