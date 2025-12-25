@@ -368,11 +368,12 @@ def main():
         
         if not (output_path == report_json_path and args.format == 'json'):
             try:
-                json_report = analyzer.generate_report(results, output_format='json')
+                # Reuse existing JSON report if available, otherwise generate it
+                json_report = report if args.format == 'json' else analyzer.generate_report(results, output_format='json')
                 with open('report.json', 'w', encoding='utf-8') as f:
                     f.write(json_report)
                 print(f"✅ Machine-readable report saved to: report.json")
-            except IOError as e:
+            except (IOError, OSError) as e:
                 print(f"⚠️  Warning: Could not save report.json: {e}")
         
         print(f"\n📈 Summary: {results['relevant_alerts']}/{results['total_alerts']} alerts relevant")
