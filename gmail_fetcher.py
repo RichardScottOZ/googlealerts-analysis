@@ -15,13 +15,17 @@ from googleapiclient.discovery import build
 import base64
 import re
 
+from url_utils import extract_actual_url, is_excluded_domain, EXCLUDE_DOMAINS
+
 
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
-# Domains to exclude when extracting article URLs from emails
-# (social media sharing links, Google actions, etc.)
-EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
+# Compiled regex patterns for email parsing (for performance)
+URL_PATTERN = re.compile(r'https?://[^\s<>"\')]+[^\s<>"\'.,;:!?)\]]')
+LINK_PATTERN = re.compile(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', re.DOTALL)
+TITLE_PATTERN = re.compile(r'<b>([^<]+)</b>')
+HTML_TAG_PATTERN = re.compile(r'<[^>]+>')
 
 
 class GmailAlertFetcher:
@@ -243,9 +247,8 @@ class GmailAlertFetcher:
         # Extract alert query from subject (e.g., "Google Alert - machine learning")
         alert_query = subject.replace('Google Alert - ', '') if 'Google Alert - ' in subject else subject
         
-        # Extract URLs and surrounding text
-        url_pattern = r'https?://[^\s<>"\')]+[^\s<>"\'.,;:!?)\]]'
-        urls = re.findall(url_pattern, body)
+        # Extract URLs and surrounding text using compiled pattern
+        urls = URL_PATTERN.findall(body)
         
         # Extract snippets around URLs (simple approach)
         # In real Google Alerts, each article has title, snippet, and URL
@@ -254,26 +257,39 @@ class GmailAlertFetcher:
         
         # Try to parse HTML if present
         if '<a href=' in body:
-            # HTML parsing - extract links and titles
-            link_pattern = r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]+)</a>'
-            matches = re.findall(link_pattern, body)
+            # HTML parsing - extract links and titles using compiled pattern
+            matches = LINK_PATTERN.findall(body)
             
-            for url, title in matches:
-                # Check if URL is an article link
-                if url.startswith('http') and not any(domain in url.lower() for domain in EXCLUDE_DOMAINS):
-                    articles.append({
-                        'title': title.strip(),
-                        'url': url,
-                        'snippet': ''
-                    })
+            for url, content in matches:
+                # Extract actual URL from Google redirect
+                actual_url = extract_actual_url(url)
+                
+                # Check if URL is an article link (check actual URL, not redirect)
+                if actual_url.startswith('http') and not is_excluded_domain(actual_url):
+                    # Extract title from content (look for <b> tags first) using compiled pattern
+                    title_match = TITLE_PATTERN.search(content)
+                    if title_match:
+                        clean_title = title_match.group(1).strip()
+                    else:
+                        # Fallback: clean up all HTML tags using compiled pattern
+                        clean_title = HTML_TAG_PATTERN.sub('', content).strip()
+                    
+                    # Only add if we have a meaningful title or URL
+                    if clean_title or actual_url:
+                        articles.append({
+                            'title': clean_title,
+                            'url': actual_url,
+                            'snippet': ''
+                        })
         
         # Fallback: use plain URLs found
         if not articles:
             for url in urls:
-                if not any(domain in url.lower() for domain in EXCLUDE_DOMAINS):
+                actual_url = extract_actual_url(url)
+                if not is_excluded_domain(actual_url):
                     articles.append({
                         'title': '',
-                        'url': url,
+                        'url': actual_url,
                         'snippet': ''
                     })
         

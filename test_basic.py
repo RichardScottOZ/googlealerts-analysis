@@ -266,6 +266,37 @@ def test_url_extraction_filtering():
     print("✅ URL extraction filtering test passed")
 
 
+def test_google_redirect_url_extraction():
+    """Test extraction of actual URLs from Google redirect URLs."""
+    from url_utils import extract_actual_url
+    
+    # Test cases
+    test_cases = [
+        {
+            'input': 'https://www.google.com/url?rct=j&sa=t&url=https://example.com/article&ct=ga',
+            'expected': 'https://example.com/article'
+        },
+        {
+            'input': 'https://www.google.com/url?url=https%3A%2F%2Fexample.com%2Fencoded%2Fpath&ct=ga',
+            'expected': 'https://example.com/encoded/path'
+        },
+        {
+            'input': 'https://example.com/direct-link',
+            'expected': 'https://example.com/direct-link'
+        },
+        {
+            'input': 'https://www.google.com/url?rct=j&url=https://mining-news.com/ml-exploration/article-123',
+            'expected': 'https://mining-news.com/ml-exploration/article-123'
+        }
+    ]
+    
+    for test_case in test_cases:
+        result = extract_actual_url(test_case['input'])
+        assert result == test_case['expected'], f"Expected {test_case['expected']}, got {result}"
+    
+    print("✅ Google redirect URL extraction test passed")
+
+
 def test_report_unicode_encoding():
     """Test that report generation handles Unicode characters properly."""
     import tempfile
@@ -374,6 +405,7 @@ def run_all_tests():
         test_article_analysis_model()
         test_category_decision_with_articles()
         test_url_extraction_filtering()
+        test_google_redirect_url_extraction()
         test_report_unicode_encoding()
         
         print()
