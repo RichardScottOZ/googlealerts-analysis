@@ -304,12 +304,12 @@ def main():
     
     # Markdown report
     markdown_report = generate_demo_markdown_report(analysis_result)
-    with open('demo_report.md', 'w') as f:
+    with open('demo_report.md', 'w', encoding='utf-8') as f:
         f.write(markdown_report)
     print("✅ Markdown report saved to: demo_report.md")
     
     # JSON report
-    with open('demo_report.json', 'w') as f:
+    with open('demo_report.json', 'w', encoding='utf-8') as f:
         json.dump(analysis_result, f, indent=2)
     print("✅ JSON report saved to: demo_report.json")
     
