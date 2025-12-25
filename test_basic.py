@@ -142,6 +142,57 @@ def test_article_summaries():
     print("✅ Article summaries test passed")
 
 
+def test_url_extraction_filtering():
+    """Test that URL extraction properly filters out non-article links."""
+    import re
+    
+    # Sample HTML with various link types
+    sample_html = """
+    <a href="https://farmonaut.com/article1">Mining Innovation Article</a>
+    <a href="https://www.facebook.com/share">Facebook</a>
+    <a href="https://twitter.com/intent/tweet">Twitter</a>
+    <a href="https://google.com/alerts/remove">Flag as irrelevant</a>
+    <a href="https://example.com/mining-news">Another Mining Article</a>
+    <a href="https://www.linkedin.com/share">LinkedIn</a>
+    """
+    
+    link_pattern = r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]+)</a>'
+    matches = re.findall(link_pattern, sample_html)
+    
+    # Filter using the same logic as gmail_fetcher.py
+    exclude_domains = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
+    articles = []
+    
+    for url, title in matches:
+        if url.startswith('http') and not any(domain in url.lower() for domain in exclude_domains):
+            articles.append({
+                'title': title.strip(),
+                'url': url,
+                'snippet': ''
+            })
+    
+    # Should have exactly 2 articles (farmonaut and example.com)
+    assert len(articles) == 2
+    
+    # Extract URLs and titles for verification
+    article_urls = [a['url'] for a in articles]
+    article_titles = [a['title'] for a in articles]
+    
+    # Verify the expected articles are present (order-independent)
+    assert 'https://farmonaut.com/article1' in article_urls
+    assert 'https://example.com/mining-news' in article_urls
+    assert 'Mining Innovation Article' in article_titles
+    assert 'Another Mining Article' in article_titles
+    
+    # Verify social media links are filtered out
+    assert not any('facebook' in url.lower() for url in article_urls)
+    assert not any('twitter' in url.lower() for url in article_urls)
+    assert not any('linkedin' in url.lower() for url in article_urls)
+    assert not any('google' in url.lower() for url in article_urls)
+    
+    print("✅ URL extraction filtering test passed")
+
+
 def run_all_tests():
     """Run all tests."""
     print("=" * 60)
@@ -156,6 +207,7 @@ def run_all_tests():
         test_confidence_bounds()
         test_keywords_list()
         test_article_summaries()
+        test_url_extraction_filtering()
         
         print()
         print("=" * 60)

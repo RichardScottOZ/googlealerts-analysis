@@ -19,6 +19,10 @@ import re
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
+# Domains to exclude when extracting article URLs from emails
+# (social media sharing links, Google actions, etc.)
+EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
+
 
 class GmailAlertFetcher:
     """Fetches Google Alerts from Gmail account."""
@@ -253,8 +257,10 @@ class GmailAlertFetcher:
             # HTML parsing - extract links and titles
             link_pattern = r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>([^<]+)</a>'
             matches = re.findall(link_pattern, body)
+            
             for url, title in matches:
-                if url.startswith('http') and 'google' not in url.lower():
+                # Check if URL is an article link
+                if url.startswith('http') and not any(domain in url.lower() for domain in EXCLUDE_DOMAINS):
                     articles.append({
                         'title': title.strip(),
                         'url': url,
@@ -264,7 +270,7 @@ class GmailAlertFetcher:
         # Fallback: use plain URLs found
         if not articles:
             for url in urls:
-                if 'google' not in url.lower():
+                if not any(domain in url.lower() for domain in EXCLUDE_DOMAINS):
                     articles.append({
                         'title': '',
                         'url': url,
