@@ -119,6 +119,12 @@ class AlertAnalyzer:
         
         return analysis_result
     
+    @staticmethod
+    def _is_result_relevant(result: Dict[str, Any]) -> bool:
+        """Check if a result has at least one relevant article."""
+        decision = result.get('decision', {})
+        return decision.get('is_relevant', False) and decision.get('relevant_article_count', 0) > 0
+    
     def generate_report(self, analysis_result: Dict[str, Any], output_format: str = "markdown") -> str:
         """
         Generate a formatted report of the analysis.
@@ -158,8 +164,7 @@ class AlertAnalyzer:
         ]
         
         # Add relevant alerts (only alerts with at least one relevant article)
-        relevant_results = [r for r in analysis_result['results'] 
-                          if r['decision']['is_relevant'] and r['decision'].get('relevant_article_count', 0) > 0]
+        relevant_results = [r for r in analysis_result['results'] if self._is_result_relevant(r)]
         
         if relevant_results:
             for i, result in enumerate(relevant_results, 1):
@@ -233,8 +238,7 @@ class AlertAnalyzer:
             report_lines.append("")
         
         # Add non-relevant alerts section (alerts with no relevant articles)
-        non_relevant_results = [r for r in analysis_result['results'] 
-                               if not r['decision']['is_relevant'] or r['decision'].get('relevant_article_count', 0) == 0]
+        non_relevant_results = [r for r in analysis_result['results'] if not self._is_result_relevant(r)]
         
         if non_relevant_results:
             report_lines.extend([

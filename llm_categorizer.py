@@ -162,7 +162,7 @@ class LLMCategorizer:
         """Build the prompt for LLM categorization."""
         articles_text = ""
         article_count = 0
-        for i, article in enumerate(alert_data.get('articles', []), 1):
+        for article in alert_data.get('articles', []):
             url = article.get('url', '')
             # Skip articles without URLs
             if not url or url == 'N/A':
