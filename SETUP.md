@@ -110,6 +110,7 @@ For OpenRouter:
 OPENROUTER_API_KEY=sk-or-xxxxxxxxxxxxx
 LLM_PROVIDER=openrouter
 LLM_MODEL=openai/gpt-4o-mini
+LLM_MODEL=allenai/olmo-3.1-32b-think:free
 # Or try: anthropic/claude-3.5-sonnet, meta-llama/llama-3.1-70b-instruct
 ```
 ```
