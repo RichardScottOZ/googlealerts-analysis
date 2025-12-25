@@ -8,13 +8,14 @@ import os
 import pickle
 from datetime import datetime, timedelta
 from typing import List, Dict, Any
-from urllib.parse import unquote, urlparse, parse_qs
 from google.auth.transport.requests import Request
 from google.oauth2.credentials import Credentials
 from google_auth_oauthlib.flow import InstalledAppFlow
 from googleapiclient.discovery import build
 import base64
 import re
+
+from url_utils import extract_actual_url, is_excluded_domain
 
 
 # Gmail API scopes
@@ -230,40 +231,6 @@ class GmailAlertFetcher:
         
         return body
     
-    def _extract_actual_url(self, url: str) -> str:
-        """
-        Extract the actual URL from a Google redirect URL.
-        
-        Google Alert emails use redirect URLs like:
-        https://www.google.com/url?...&url=<actual_url>&...
-        
-        Args:
-            url: Original URL (may be a Google redirect)
-            
-        Returns:
-            Actual destination URL
-        """
-        # Check if this is a Google redirect URL
-        if 'google.com/url' in url:
-            try:
-                parsed = urlparse(url)
-                params = parse_qs(parsed.query)
-                
-                # Extract the 'url' parameter which contains the actual destination
-                if 'url' in params:
-                    actual_url = params['url'][0]
-                    return unquote(actual_url)
-                
-                # Fallback: try regex extraction
-                match = re.search(r'[?&]url=([^&]+)', url)
-                if match:
-                    return unquote(match.group(1))
-            except Exception as e:
-                print(f"Warning: Could not extract URL from redirect: {e}")
-                return url
-        
-        return url
-    
     def _extract_alert_info(self, body: str, subject: str) -> Dict[str, Any]:
         """
         Extract alert information from email body.
@@ -296,10 +263,10 @@ class GmailAlertFetcher:
             
             for url, content in matches:
                 # Extract actual URL from Google redirect
-                actual_url = self._extract_actual_url(url)
+                actual_url = extract_actual_url(url)
                 
                 # Check if URL is an article link (check actual URL, not redirect)
-                if actual_url.startswith('http') and not any(domain in actual_url.lower() for domain in EXCLUDE_DOMAINS):
+                if actual_url.startswith('http') and not is_excluded_domain(actual_url, EXCLUDE_DOMAINS):
                     # Extract title from content (look for <b> tags first)
                     title_match = re.search(r'<b>([^<]+)</b>', content)
                     if title_match:
@@ -319,8 +286,8 @@ class GmailAlertFetcher:
         # Fallback: use plain URLs found
         if not articles:
             for url in urls:
-                actual_url = self._extract_actual_url(url)
-                if not any(domain in actual_url.lower() for domain in EXCLUDE_DOMAINS):
+                actual_url = extract_actual_url(url)
+                if not is_excluded_domain(actual_url, EXCLUDE_DOMAINS):
                     articles.append({
                         'title': '',
                         'url': actual_url,

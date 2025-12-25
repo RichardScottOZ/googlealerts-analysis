@@ -5,51 +5,13 @@ This demonstrates:
 1. Extraction of actual URLs from Google redirect URLs
 2. Article-level logging during processing
 3. JSON output with complete article information
-
-Note: This demo duplicates some logic from gmail_fetcher.py to avoid
-requiring Google API libraries which may not be installed.
 """
 
 import json
 import re
-from urllib.parse import unquote, urlparse, parse_qs
+from datetime import datetime
 
-
-def extract_actual_url(url: str) -> str:
-    """
-    Extract the actual URL from a Google redirect URL.
-    
-    This is the same logic as GmailAlertFetcher._extract_actual_url()
-    
-    Google Alert emails use redirect URLs like:
-    https://www.google.com/url?...&url=<actual_url>&...
-    
-    Args:
-        url: Original URL (may be a Google redirect)
-        
-    Returns:
-        Actual destination URL
-    """
-    # Check if this is a Google redirect URL
-    if 'google.com/url' in url:
-        try:
-            parsed = urlparse(url)
-            params = parse_qs(parsed.query)
-            
-            # Extract the 'url' parameter which contains the actual destination
-            if 'url' in params:
-                actual_url = params['url'][0]
-                return unquote(actual_url)
-            
-            # Fallback: try regex extraction
-            match = re.search(r'[?&]url=([^&]+)', url)
-            if match:
-                return unquote(match.group(1))
-        except Exception as e:
-            print(f"Warning: Could not extract URL from redirect: {e}")
-            return url
-    
-    return url
+from url_utils import extract_actual_url, is_excluded_domain
 
 
 def extract_alert_info(body: str, subject: str):
@@ -67,9 +29,6 @@ def extract_alert_info(body: str, subject: str):
     
     # Try to parse HTML if present
     if '<a href=' in body:
-        # First, try to extract title from <b> tags and URLs from <a> tags separately
-        # This handles the nested structure of Google Alert emails better
-        
         # Extract all links with their surrounding context
         link_pattern = r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>'
         matches = re.findall(link_pattern, body, re.DOTALL)
@@ -79,7 +38,7 @@ def extract_alert_info(body: str, subject: str):
             actual_url = extract_actual_url(url)
             
             # Check if URL is an article link (check actual URL, not redirect)
-            if actual_url.startswith('http') and not any(domain in actual_url.lower() for domain in EXCLUDE_DOMAINS):
+            if actual_url.startswith('http') and not is_excluded_domain(actual_url, EXCLUDE_DOMAINS):
                 # Extract title from content (look for <b> tags)
                 title_match = re.search(r'<b>([^<]+)</b>', content)
                 if title_match:
@@ -184,8 +143,9 @@ def demo_json_structure():
     print()
     
     # Mock analysis result showing the complete structure
+    current_time = datetime.now().isoformat()
     mock_result = {
-        'timestamp': '2024-01-15T10:30:00',
+        'timestamp': current_time,
         'configuration': {
             'llm_provider': 'openai',
             'llm_model': 'gpt-4o-mini',

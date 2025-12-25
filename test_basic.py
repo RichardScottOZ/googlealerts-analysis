@@ -267,33 +267,8 @@ def test_url_extraction_filtering():
 
 
 def test_google_redirect_url_extraction():
-    """Test extraction of actual URLs from Google redirect URLs.
-    
-    Note: This test duplicates the URL extraction logic from gmail_fetcher.py
-    rather than importing it because gmail_fetcher requires Google API libraries
-    which may not be installed in all test environments.
-    """
-    from urllib.parse import unquote, urlparse, parse_qs
-    import re
-    
-    def extract_actual_url(url: str) -> str:
-        """Extract the actual URL from a Google redirect URL.
-        
-        This is the same logic as GmailAlertFetcher._extract_actual_url()
-        """
-        if 'google.com/url' in url:
-            try:
-                parsed = urlparse(url)
-                params = parse_qs(parsed.query)
-                if 'url' in params:
-                    actual_url = params['url'][0]
-                    return unquote(actual_url)
-                match = re.search(r'[?&]url=([^&]+)', url)
-                if match:
-                    return unquote(match.group(1))
-            except Exception:
-                return url
-        return url
+    """Test extraction of actual URLs from Google redirect URLs."""
+    from url_utils import extract_actual_url
     
     # Test cases
     test_cases = [
