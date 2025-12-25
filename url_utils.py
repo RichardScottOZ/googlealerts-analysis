@@ -7,7 +7,12 @@ This module has no external dependencies beyond Python standard library.
 
 import re
 from urllib.parse import unquote, urlparse, parse_qs
-from typing import Optional
+from typing import Optional, List
+
+
+# Domains to exclude when extracting article URLs from emails
+# (social media sharing links, Google actions, etc.)
+EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
 
 
 def extract_actual_url(url: str) -> str:
@@ -55,19 +60,19 @@ def extract_actual_url(url: str) -> str:
     return url
 
 
-def is_excluded_domain(url: str, exclude_domains: list = None) -> bool:
+def is_excluded_domain(url: str, exclude_domains: List[str] = None) -> bool:
     """
     Check if a URL is from an excluded domain.
     
     Args:
         url: URL to check
-        exclude_domains: List of domain strings to exclude
+        exclude_domains: List of domain strings to exclude (optional, uses EXCLUDE_DOMAINS if None)
         
     Returns:
         True if URL is from an excluded domain
     """
     if exclude_domains is None:
-        exclude_domains = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
+        exclude_domains = EXCLUDE_DOMAINS
     
     url_lower = url.lower()
     return any(domain in url_lower for domain in exclude_domains)

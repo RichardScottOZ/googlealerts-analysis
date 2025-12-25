@@ -15,15 +15,11 @@ from googleapiclient.discovery import build
 import base64
 import re
 
-from url_utils import extract_actual_url, is_excluded_domain
+from url_utils import extract_actual_url, is_excluded_domain, EXCLUDE_DOMAINS
 
 
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
-
-# Domains to exclude when extracting article URLs from emails
-# (social media sharing links, Google actions, etc.)
-EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
 
 
 class GmailAlertFetcher:
@@ -266,7 +262,7 @@ class GmailAlertFetcher:
                 actual_url = extract_actual_url(url)
                 
                 # Check if URL is an article link (check actual URL, not redirect)
-                if actual_url.startswith('http') and not is_excluded_domain(actual_url, EXCLUDE_DOMAINS):
+                if actual_url.startswith('http') and not is_excluded_domain(actual_url):
                     # Extract title from content (look for <b> tags first)
                     title_match = re.search(r'<b>([^<]+)</b>', content)
                     if title_match:
@@ -287,7 +283,7 @@ class GmailAlertFetcher:
         if not articles:
             for url in urls:
                 actual_url = extract_actual_url(url)
-                if not is_excluded_domain(actual_url, EXCLUDE_DOMAINS):
+                if not is_excluded_domain(actual_url):
                     articles.append({
                         'title': '',
                         'url': actual_url,

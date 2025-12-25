@@ -11,7 +11,7 @@ import json
 import re
 from datetime import datetime
 
-from url_utils import extract_actual_url, is_excluded_domain
+from url_utils import extract_actual_url, is_excluded_domain, EXCLUDE_DOMAINS
 
 
 def extract_alert_info(body: str, subject: str):
@@ -20,7 +20,6 @@ def extract_alert_info(body: str, subject: str):
     
     This is a simplified version of GmailAlertFetcher._extract_alert_info()
     """
-    EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
     
     # Extract alert query from subject
     alert_query = subject.replace('Google Alert - ', '') if 'Google Alert - ' in subject else subject
@@ -38,7 +37,7 @@ def extract_alert_info(body: str, subject: str):
             actual_url = extract_actual_url(url)
             
             # Check if URL is an article link (check actual URL, not redirect)
-            if actual_url.startswith('http') and not is_excluded_domain(actual_url, EXCLUDE_DOMAINS):
+            if actual_url.startswith('http') and not is_excluded_domain(actual_url):
                 # Extract title from content (look for <b> tags)
                 title_match = re.search(r'<b>([^<]+)</b>', content)
                 if title_match:
