@@ -191,15 +191,37 @@ def generate_demo_markdown_report(analysis_result):
 
             # Add article summaries if available
             if decision.get('article_summaries'):
-                report_lines.append("**Article Summaries:**")
+                # Build summary lines first
+                summary_lines = []
                 for article_summary in decision['article_summaries']:
                     title = article_summary.get('title', '').strip()
                     summary = article_summary.get('summary', '').strip()
                     url = article_summary.get('url', '').strip()
-                    display_title = f"{title}: " if title else ""
-                    url_suffix = f" ({url})" if url else ""
-                    report_lines.append(f"- {display_title}{summary}{url_suffix}")
-                report_lines.append("")
+                    
+                    # Skip if both title and summary are empty
+                    if not title and not summary:
+                        continue
+                    
+                    # Build the line with available components
+                    parts = []
+                    if title:
+                        parts.append(title)
+                    if summary:
+                        # Add colon separator if we have both title and summary
+                        if title:
+                            parts.append(': ')
+                        parts.append(summary)
+                    if url:
+                        parts.append(f" ({url})")
+                    
+                    if parts:  # Only add if we have something to display
+                        summary_lines.append(f"- {''.join(parts)}")
+                
+                # Only add the section if we have valid summaries
+                if summary_lines:
+                    report_lines.append("**Article Summaries:**")
+                    report_lines.extend(summary_lines)
+                    report_lines.append("")
 
             report_lines.extend([
                 f"**Keywords:** {', '.join(decision['keywords'])}",
