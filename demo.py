@@ -69,7 +69,19 @@ def create_mock_decisions():
             category="Machine Learning - Exploration",
             reasoning="Directly discusses deep learning applications in copper deposit prediction and ML for geological mapping, which are core topics for the repository.",
             summary="AI and deep learning techniques show significant improvements in copper discovery and geological mapping for mineral exploration.",
-            keywords=["machine learning", "deep learning", "copper", "exploration", "geological mapping"]
+            keywords=["machine learning", "deep learning", "copper", "exploration", "geological mapping"],
+            article_summaries=[
+                {
+                    "title": "AI-Powered Copper Discovery in Chile Using Deep Learning",
+                    "summary": "Researchers developed deep learning algorithms improving copper deposit prediction accuracy by 40%",
+                    "url": "https://example.com/ai-copper-discovery"
+                },
+                {
+                    "title": "Neural Networks Transform Mineral Exploration",
+                    "summary": "Mining companies adopt ML techniques for geological mapping and target generation",
+                    "url": "https://example.com/neural-networks-exploration"
+                }
+            ]
         ),
         CategoryDecision(
             is_relevant=True,
@@ -77,7 +89,14 @@ def create_mock_decisions():
             category="Remote Sensing",
             reasoning="Remote sensing and hyperspectral analysis are important ML application areas in mineral exploration, directly relevant to repository topics.",
             summary="Hyperspectral remote sensing techniques using satellite imagery for identifying gold mineralization zones.",
-            keywords=["remote sensing", "hyperspectral", "satellite", "gold", "exploration"]
+            keywords=["remote sensing", "hyperspectral", "satellite", "gold", "exploration"],
+            article_summaries=[
+                {
+                    "title": "Satellite Imagery Analysis for Gold Exploration",
+                    "summary": "Hyperspectral remote sensing techniques identify alteration zones indicative of gold mineralization",
+                    "url": "https://example.com/satellite-gold"
+                }
+            ]
         ),
         CategoryDecision(
             is_relevant=False,
@@ -85,7 +104,8 @@ def create_mock_decisions():
             category="Not Relevant - Cryptocurrency",
             reasoning="This is about cryptocurrency Bitcoin mining, not physical mineral exploration. Despite the word 'mining', it's completely unrelated to geological or mineral exploration.",
             summary="Bitcoin cryptocurrency price movements and blockchain mining difficulty.",
-            keywords=["bitcoin", "cryptocurrency", "blockchain"]
+            keywords=["bitcoin", "cryptocurrency", "blockchain"],
+            article_summaries=[]
         )
     ]
 
@@ -166,7 +186,22 @@ def generate_demo_markdown_report(analysis_result):
                 f"**Date:** {alert['date']}",
                 "",
                 f"**Summary:** {decision['summary']}",
-                "",
+                ""
+            ])
+
+            # Add article summaries if available
+            if decision.get('article_summaries'):
+                report_lines.append("**Article Summaries:**")
+                for article_summary in decision['article_summaries']:
+                    title = article_summary.get('title', '').strip()
+                    summary = article_summary.get('summary', '').strip()
+                    url = article_summary.get('url', '').strip()
+                    display_title = f"{title}: " if title else ""
+                    url_suffix = f" ({url})" if url else ""
+                    report_lines.append(f"- {display_title}{summary}{url_suffix}")
+                report_lines.append("")
+
+            report_lines.extend([
                 f"**Keywords:** {', '.join(decision['keywords'])}",
                 "",
                 f"**Reasoning:** {decision['reasoning']}",
