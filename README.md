@@ -119,9 +119,10 @@ On first run, you'll be prompted to authenticate with Google:
 
 ## Output
 
-The tool generates a report with:
+The tool generates two reports:
 
 ### Markdown Report (`report.md`)
+Human-readable report with:
 - Summary statistics
 - Relevant alerts with detailed analysis
 - Article links and summaries
@@ -146,8 +147,8 @@ Example output:
 **Keywords:** machine learning, copper, exploration, predictive modeling
 ```
 
-### JSON Report
-Full structured data for programmatic processing:
+### JSON Report (`report.json`)
+**Always generated automatically** for programmatic processing. Contains full structured data:
 ```json
 {
   "timestamp": "2024-01-15T10:30:00",
@@ -156,6 +157,8 @@ Full structured data for programmatic processing:
   "results": [...]
 }
 ```
+
+The JSON report is always created as `report.json` regardless of the `--format` or `--output` parameters, ensuring machine-readable data is always available.
 
 ## Project Structure
 

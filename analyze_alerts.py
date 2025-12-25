@@ -360,6 +360,22 @@ def main():
             f.write(report)
         
         print(f"✅ Report saved to: {args.output}")
+        
+        # Always save machine-readable JSON report (unless already saved)
+        # Normalize paths to handle './report.json', '../report.json', etc.
+        output_path = os.path.abspath(args.output)
+        report_json_path = os.path.abspath('report.json')
+        
+        if not (output_path == report_json_path and args.format == 'json'):
+            try:
+                # Reuse existing JSON report if available, otherwise generate it
+                json_report = report if args.format == 'json' else analyzer.generate_report(results, output_format='json')
+                with open('report.json', 'w', encoding='utf-8') as f:
+                    f.write(json_report)
+                print(f"✅ Machine-readable report saved to: report.json")
+            except (IOError, OSError) as e:
+                print(f"⚠️  Warning: Could not save report.json: {e}")
+        
         print(f"\n📈 Summary: {results['relevant_alerts']}/{results['total_alerts']} alerts relevant")
         
     except FileNotFoundError as e:

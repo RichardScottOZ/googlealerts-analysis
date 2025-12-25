@@ -90,7 +90,18 @@ python analyze_alerts.py --provider openai --model gpt-4
 
 ## Understanding the Output
 
-After running, you'll get a report showing:
+After running, you'll get two reports:
+
+**1. Main Report** (default: `report.md`)
+- Human-readable markdown format
+- Customizable with `--output` and `--format` flags
+
+**2. JSON Report** (`report.json`)
+- **Always generated automatically**
+- Machine-readable structured data
+- Perfect for programmatic processing, automation, and integration
+
+### Report Contents
 
 ✅ **Relevant Alerts** - Articles about ML in mineral exploration
 - Category (e.g., "Machine Learning - Exploration")
