@@ -8,6 +8,30 @@ import json
 from llm_categorizer import CategoryDecision, ArticleAnalysis
 
 
+def test_scholar_alert_data_structure():
+    """Test the expected scholar alert data structure."""
+    alert = {
+        'alert_query': 'machine learning mineral exploration',
+        'date': '2024-01-01',
+        'message_id': '123',
+        'articles': [
+            {
+                'title': 'ML for Mineral Exploration',
+                'url': 'https://scholar.google.com/article',
+                'snippet': 'Test snippet'
+            }
+        ],
+        'full_body': 'Test body'
+    }
+    
+    assert 'alert_query' in alert
+    assert 'articles' in alert
+    assert len(alert['articles']) == 1
+    assert alert['articles'][0]['title'] == 'ML for Mineral Exploration'
+    
+    print("✅ Scholar alert data structure test passed")
+
+
 def test_category_decision_model():
     """Test that CategoryDecision model works correctly."""
     decision = CategoryDecision(
@@ -396,6 +420,7 @@ def run_all_tests():
     print()
     
     try:
+        test_scholar_alert_data_structure()
         test_category_decision_model()
         test_category_decision_json_serialization()
         test_alert_data_structure()
