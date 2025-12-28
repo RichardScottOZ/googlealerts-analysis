@@ -73,9 +73,9 @@ class GmailAlertFetcher:
         
         self.service = build('gmail', 'v1', credentials=creds)
         
-    def get_alert_statistics(self, days_back: int = None) -> Dict[str, int]:
+    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google') -> Dict[str, int]:
         """
-        Get statistics about Google Alert emails.
+        Get statistics about Google Alert or Google Scholar Alert emails.
         
         Note: Uses Gmail API's resultSizeEstimate which provides an approximate count.
         For very large mailboxes, the count may not be exact but is sufficient for
@@ -83,6 +83,7 @@ class GmailAlertFetcher:
         
         Args:
             days_back: Number of days to search back (None for all time)
+            alert_type: Type of alert ('google' or 'scholar')
             
         Returns:
             Dictionary with 'total', 'unread', and 'read' counts (approximate)
@@ -90,8 +91,11 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Build query for Google Alerts emails
-        base_query = 'from:googlealerts-noreply@google.com'
+        # Build query for alert emails based on type
+        if alert_type == 'scholar':
+            base_query = 'from:scholaralerts-noreply@google.com'
+        else:
+            base_query = 'from:googlealerts-noreply@google.com'
         
         if days_back:
             search_date = datetime.now() - timedelta(days=days_back)
@@ -178,12 +182,59 @@ class GmailAlertFetcher:
             print(f"Error fetching Google Alerts: {e}")
             return []
     
-    def _parse_alert_message(self, message_id: str) -> Dict[str, Any]:
+    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10) -> List[Dict[str, Any]]:
         """
-        Parse a Google Alert email message.
+        Fetch Google Scholar Alerts emails from Gmail.
+        
+        Args:
+            days_back: Number of days to search back
+            max_results: Maximum number of emails to fetch
+            
+        Returns:
+            List of alert dictionaries with title, link, snippet, and date
+        """
+        if not self.service:
+            self.authenticate()
+        
+        # Calculate date for query
+        search_date = datetime.now() - timedelta(days=days_back)
+        date_str = search_date.strftime('%Y/%m/%d')
+        
+        # Search for Google Scholar Alerts emails
+        query = f'from:scholaralerts-noreply@google.com after:{date_str}'
+        
+        try:
+            results = self.service.users().messages().list(
+                userId='me',
+                q=query,
+                maxResults=max_results
+            ).execute()
+            
+            messages = results.get('messages', [])
+            
+            if not messages:
+                print(f"No Google Scholar Alerts found in the last {days_back} days.")
+                return []
+            
+            alerts = []
+            for message in messages:
+                alert_data = self._parse_alert_message(message['id'], alert_type='scholar')
+                if alert_data:
+                    alerts.append(alert_data)
+            
+            return alerts
+            
+        except Exception as e:
+            print(f"Error fetching Google Scholar Alerts: {e}")
+            return []
+    
+    def _parse_alert_message(self, message_id: str, alert_type: str = 'google') -> Dict[str, Any]:
+        """
+        Parse a Google Alert or Google Scholar Alert email message.
         
         Args:
             message_id: Gmail message ID
+            alert_type: Type of alert ('google' or 'scholar')
             
         Returns:
             Dictionary with alert information
@@ -204,7 +255,7 @@ class GmailAlertFetcher:
             body = self._get_email_body(message['payload'])
             
             # Parse alert information from body
-            alert_info = self._extract_alert_info(body, subject)
+            alert_info = self._extract_alert_info(body, subject, alert_type=alert_type)
             alert_info['date'] = date
             alert_info['message_id'] = message_id
             
@@ -233,19 +284,25 @@ class GmailAlertFetcher:
         
         return body
     
-    def _extract_alert_info(self, body: str, subject: str) -> Dict[str, Any]:
+    def _extract_alert_info(self, body: str, subject: str, alert_type: str = 'google') -> Dict[str, Any]:
         """
         Extract alert information from email body.
         
         Args:
             body: Email body text
             subject: Email subject line
+            alert_type: Type of alert ('google' or 'scholar')
             
         Returns:
             Dictionary with title, links, and snippets
         """
-        # Extract alert query from subject (e.g., "Google Alert - machine learning")
-        alert_query = subject.replace('Google Alert - ', '') if 'Google Alert - ' in subject else subject
+        # Extract alert query from subject
+        if alert_type == 'scholar':
+            # Google Scholar alerts have format like: "Scholar Alert: machine learning"
+            alert_query = subject.replace('Scholar Alert: ', '') if 'Scholar Alert: ' in subject else subject
+        else:
+            # Google Alerts have format like: "Google Alert - machine learning"
+            alert_query = subject.replace('Google Alert - ', '') if 'Google Alert - ' in subject else subject
         
         # Extract URLs and surrounding text using compiled pattern
         urls = URL_PATTERN.findall(body)

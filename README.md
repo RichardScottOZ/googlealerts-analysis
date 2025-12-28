@@ -1,12 +1,13 @@
 # Google Alerts Analysis for Mineral Exploration ML
 
-Automatically categorize Google Alerts to determine their relevance to the [mineral-exploration-machine-learning](https://github.com/RichardScottOZ/mineral-exploration-machine-learning) repository using AI-powered analysis.
+Automatically categorize Google Alerts and Google Scholar Alerts to determine their relevance to the [mineral-exploration-machine-learning](https://github.com/RichardScottOZ/mineral-exploration-machine-learning) repository using AI-powered analysis.
 
-This tool fetches Google Alerts from Gmail and uses LLMs (OpenAI GPT-4/GPT-4o-mini, Google Gemini, or OpenRouter) to intelligently categorize them, providing summaries and relevance scores for mineral exploration machine learning applications.
+This tool fetches Google Alerts and Google Scholar Alerts from Gmail and uses LLMs (OpenAI GPT-4/GPT-4o-mini, Google Gemini, or OpenRouter) to intelligently categorize them, providing summaries and relevance scores for mineral exploration machine learning applications.
 
 ## Features
 
-- 🔍 **Gmail Integration**: Automatically fetches Google Alerts from your Gmail account
+- 🔍 **Gmail Integration**: Automatically fetches Google Alerts and Google Scholar Alerts from your Gmail account
+- 🎓 **Scholar Support**: Analyze both general Google Alerts and specialized Google Scholar research alerts
 - 🤖 **AI-Powered Categorization**: Uses GPT-4o-mini, Gemini, or OpenRouter to analyze content relevance
 - 📊 **Detailed Reports**: Generates markdown or JSON reports with summaries and insights
 - 🎯 **Smart Filtering**: Identifies articles relevant to ML in mineral exploration
@@ -70,13 +71,19 @@ DAYS_BACK=7               # How many days back to search
 
 ### Basic Usage
 
-Run with default settings (from .env):
+**Analyze Google Alerts:**
 ```bash
 python analyze_alerts.py
 ```
 
+**Analyze Google Scholar Alerts:**
+```bash
+python analyze_scholar_alerts.py
+```
+
 ### Advanced Usage
 
+**Google Alerts:**
 ```bash
 # Use Gemini instead of OpenAI
 python analyze_alerts.py --provider gemini
@@ -100,13 +107,27 @@ python analyze_alerts.py \
   --format markdown
 ```
 
+**Google Scholar Alerts:**
+```bash
+# Same options as Google Alerts
+python analyze_scholar_alerts.py --provider gemini --days 14
+
+# Custom output file
+python analyze_scholar_alerts.py --output my_scholar_report.md
+
+# JSON format
+python analyze_scholar_alerts.py --format json --output scholar_results.json
+```
+
 ### Command Line Arguments
+
+Both `analyze_alerts.py` and `analyze_scholar_alerts.py` support:
 
 - `--provider`: LLM provider (`openai`, `gemini`, or `openrouter`)
 - `--model`: Specific model name
 - `--days`: Number of days back to search for alerts
 - `--max-emails`: Maximum number of alerts to process
-- `--output`: Output file path (default: `report.md`)
+- `--output`: Output file path (default: `report.md` or `scholar_report.md`)
 - `--format`: Output format (`markdown` or `json`)
 
 ## First Run
@@ -119,9 +140,11 @@ On first run, you'll be prompted to authenticate with Google:
 
 ## Output
 
-The tool generates two reports:
+The tools generate two reports for each type of alert:
 
-### Markdown Report (`report.md`)
+### For Google Alerts
+
+**Markdown Report (`report.md`):**
 Human-readable report with:
 - Summary statistics
 - Relevant alerts with detailed analysis
@@ -129,9 +152,20 @@ Human-readable report with:
 - Categorization reasoning
 - Keywords and confidence scores
 
+**JSON Report (`report.json`):**
+Always generated automatically for programmatic processing. Contains full structured data.
+
+### For Google Scholar Alerts
+
+**Markdown Report (`scholar_report.md`):**
+Same format as Google Alerts but for Scholar research articles.
+
+**JSON Report (`scholar_report.json`):**
+Machine-readable format for Scholar alerts.
+
 Example output:
 ```markdown
-# Google Alerts Analysis Report
+# Google Scholar Alerts Analysis Report
 
 ## Summary
 - **Total Alerts Processed:** 10
@@ -147,35 +181,23 @@ Example output:
 **Keywords:** machine learning, copper, exploration, predictive modeling
 ```
 
-### JSON Report (`report.json`)
-**Always generated automatically** for programmatic processing. Contains full structured data:
-```json
-{
-  "timestamp": "2024-01-15T10:30:00",
-  "total_alerts": 10,
-  "relevant_alerts": 7,
-  "results": [...]
-}
-```
-
-The JSON report is always created as `report.json` regardless of the `--format` or `--output` parameters, ensuring machine-readable data is always available.
-
 ## Project Structure
 
 ```
 googlealerts-analysis/
-├── analyze_alerts.py      # Main orchestrator script
-├── gmail_fetcher.py       # Gmail API integration
-├── llm_categorizer.py     # LLM categorization logic
-├── requirements.txt       # Python dependencies
-├── .env.example          # Configuration template
-├── .gitignore            # Git ignore rules
-└── README.md             # This file
+├── analyze_alerts.py          # Main orchestrator for Google Alerts
+├── analyze_scholar_alerts.py  # Main orchestrator for Google Scholar Alerts
+├── gmail_fetcher.py           # Gmail API integration (supports both alert types)
+├── llm_categorizer.py         # LLM categorization logic
+├── requirements.txt           # Python dependencies
+├── .env.example              # Configuration template
+├── .gitignore                # Git ignore rules
+└── README.md                 # This file
 ```
 
 ## How It Works
 
-1. **Fetch**: Connects to Gmail API and retrieves Google Alerts emails
+1. **Fetch**: Connects to Gmail API and retrieves Google Alerts or Google Scholar Alerts emails
 2. **Parse**: Extracts article titles, URLs, and content from emails
 3. **Analyze**: Sends each alert to LLM with context about the mineral-exploration-machine-learning repo
 4. **Categorize**: LLM determines relevance, confidence, and provides reasoning
@@ -203,9 +225,11 @@ The LLM evaluates alerts based on relevance to:
 - Check API key has sufficient quota/credits
 
 ### No Alerts Found
-- Verify you have Google Alerts set up in Gmail
+- **For Google Alerts:** Verify you have Google Alerts set up in Gmail
+- **For Google Scholar Alerts:** Verify you have Google Scholar Alerts set up
 - Check the `DAYS_BACK` parameter - increase if needed
-- Confirm alerts are from `googlealerts-noreply@google.com`
+- Confirm Google Alerts are from `googlealerts-noreply@google.com`
+- Confirm Scholar Alerts are from `scholaralerts-noreply@google.com`
 
 ## Cost Considerations
 
