@@ -22,6 +22,14 @@ def extract_actual_url(url: str) -> str:
     Google Alert emails use redirect URLs like:
     https://www.google.com/url?...&url=<actual_url>&...
     
+    Google Scholar Alert emails use redirect URLs like:
+    https://scholar.google.com/scholar_url?url=<actual_url>&...
+    https://scholar.googleusercontent.com/scholar?...&url=<actual_url>&...
+    
+    Note: Google properly URL-encodes the destination URL in the 'url' parameter,
+    so parse_qs handles it correctly even when the destination URL contains
+    query parameters with & characters.
+    
     This function extracts the actual destination URL.
     
     Args:
@@ -33,26 +41,35 @@ def extract_actual_url(url: str) -> str:
     Examples:
         >>> extract_actual_url('https://www.google.com/url?url=https://example.com')
         'https://example.com'
+        >>> extract_actual_url('https://scholar.google.com/scholar_url?url=https://arxiv.org/abs/123')
+        'https://arxiv.org/abs/123'
         >>> extract_actual_url('https://example.com/article')
         'https://example.com/article'
     """
-    # Check if this is a Google redirect URL
-    if 'google.com/url' not in url:
+    # Check if this is a Google redirect URL (regular or Scholar)
+    if not ('google.com/url' in url or 'scholar.google' in url):
         return url
     
     try:
         parsed = urlparse(url)
-        params = parse_qs(parsed.query)
         
-        # Extract the 'url' parameter which contains the actual destination
-        if 'url' in params:
+        # Use parse_qs - it handles URL-encoded parameters correctly
+        # Google properly encodes the 'url' parameter, so this works for URLs
+        # with query parameters, special characters, etc.
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        
+        if 'url' in params and params['url']:
             actual_url = params['url'][0]
             return unquote(actual_url)
         
-        # Fallback: try regex extraction
-        match = re.search(r'[?&]url=([^&]+)', url)
+        # Fallback: Manual regex extraction for edge cases where parse_qs fails
+        # This pattern matches url= followed by content until we hit a known Google parameter
+        # Pattern looks for &param= where param doesn't contain 'url' to avoid false matches
+        match = re.search(r'[?&]url=([^&]+(?:&(?!ct=|sa=|rct=|cd=|usg=|ved=|q=)[^&]+)*)', url)
         if match:
-            return unquote(match.group(1))
+            actual_url = match.group(1)
+            return unquote(actual_url)
+            
     except (ValueError, KeyError, IndexError) as e:
         print(f"Warning: Could not extract URL from redirect: {e}")
         return url
