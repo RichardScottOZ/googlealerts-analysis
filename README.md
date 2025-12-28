@@ -231,6 +231,11 @@ The LLM evaluates alerts based on relevance to:
 - Confirm Google Alerts are from `googlealerts-noreply@google.com`
 - Confirm Scholar Alerts are from `scholaralerts-noreply@google.com`
 
+### Scholar Alerts Not Showing URLs
+- This issue has been fixed! The system now correctly extracts article URLs from Scholar redirect links
+- Scholar alerts use `scholar.google.com/scholar_url?url=<actual_url>` format
+- The URL extraction now handles both regular Google Alerts and Scholar-specific formats
+
 ## Cost Considerations
 
 - **OpenAI GPT-4o-mini**: Very cost-effective (~$0.15 per 1M input tokens)

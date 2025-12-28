@@ -151,6 +151,8 @@ token.pickle
 # Generated reports
 report.md
 report.json
+scholar_report.md
+scholar_report.json
 demo_report.md
 demo_report.json
 
