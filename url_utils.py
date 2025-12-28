@@ -26,6 +26,10 @@ def extract_actual_url(url: str) -> str:
     https://scholar.google.com/scholar_url?url=<actual_url>&...
     https://scholar.googleusercontent.com/scholar?...&url=<actual_url>&...
     
+    Note: Google properly URL-encodes the destination URL in the 'url' parameter,
+    so parse_qs handles it correctly even when the destination URL contains
+    query parameters with & characters.
+    
     This function extracts the actual destination URL.
     
     Args:
@@ -47,35 +51,23 @@ def extract_actual_url(url: str) -> str:
         return url
     
     try:
-        # Use regex to extract the url parameter value more robustly
-        # This handles cases where the actual URL contains & characters
-        match = re.search(r'[?&]url=([^&]+(?:&[^=&]+)*)', url)
-        if match:
-            # Get everything after url= until we hit another parameter (like &ct=, &sa=, etc.)
-            # We need to find the end of the URL, which is either:
-            # 1. Another Google parameter (&ct=, &sa=, &rct=, etc.)
-            # 2. End of string
-            url_part = url[url.find('url=') + 4:]
-            
-            # Find where the actual URL ends (before Google's tracking parameters)
-            # Common Google tracking parameters
-            google_params = ['&ct=', '&sa=', '&rct=', '&cd=', '&usg=', '&ved=', '&q=']
-            end_pos = len(url_part)
-            
-            for param in google_params:
-                pos = url_part.find(param)
-                if pos != -1 and pos < end_pos:
-                    end_pos = pos
-            
-            actual_url = url_part[:end_pos]
+        parsed = urlparse(url)
+        
+        # Use parse_qs - it handles URL-encoded parameters correctly
+        # Google properly encodes the 'url' parameter, so this works for URLs
+        # with query parameters, special characters, etc.
+        params = parse_qs(parsed.query, keep_blank_values=True)
+        
+        if 'url' in params and params['url']:
+            actual_url = params['url'][0]
             return unquote(actual_url)
         
-        # Fallback: try parse_qs (works for simple cases)
-        parsed = urlparse(url)
-        params = parse_qs(parsed.query)
-        
-        if 'url' in params:
-            actual_url = params['url'][0]
+        # Fallback: Manual regex extraction for edge cases where parse_qs fails
+        # This pattern matches url= followed by content until we hit a known Google parameter
+        # Pattern looks for &param= where param doesn't contain 'url' to avoid false matches
+        match = re.search(r'[?&]url=([^&]+(?:&(?!ct=|sa=|rct=|cd=|usg=|ved=|q=)[^&]+)*)', url)
+        if match:
+            actual_url = match.group(1)
             return unquote(actual_url)
             
     except (ValueError, KeyError, IndexError) as e:

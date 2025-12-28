@@ -137,8 +137,8 @@ def test_edge_cases():
     
     edge_cases = [
         {
-            'name': 'URL with multiple parameters',
-            'url': 'https://scholar.google.com/scholar_url?url=https://example.com/article?id=123&param=value&ct=ga',
+            'name': 'URL with multiple parameters (URL-encoded, as Google does it)',
+            'url': 'https://scholar.google.com/scholar_url?url=https%3A%2F%2Fexample.com%2Farticle%3Fid%3D123%26param%3Dvalue&ct=ga',
             'expected': 'https://example.com/article?id=123&param=value',
             'should_exclude': False
         },
