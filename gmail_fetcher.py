@@ -163,9 +163,13 @@ class GmailAlertFetcher:
         try:
             messages = []
             page_token = None
+            max_iterations = (max_results // 500) + 2  # Safety limit with buffer
+            iterations = 0
             
             # Gmail API limits maxResults to 500 per request, so we need pagination
-            while len(messages) < max_results:
+            while len(messages) < max_results and iterations < max_iterations:
+                iterations += 1
+                
                 # Calculate how many more results we need
                 results_needed = min(max_results - len(messages), 500)
                 
@@ -234,9 +238,13 @@ class GmailAlertFetcher:
         try:
             messages = []
             page_token = None
+            max_iterations = (max_results // 500) + 2  # Safety limit with buffer
+            iterations = 0
             
             # Gmail API limits maxResults to 500 per request, so we need pagination
-            while len(messages) < max_results:
+            while len(messages) < max_results and iterations < max_iterations:
+                iterations += 1
+                
                 # Calculate how many more results we need
                 results_needed = min(max_results - len(messages), 500)
                 

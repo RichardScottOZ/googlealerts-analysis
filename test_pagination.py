@@ -95,14 +95,18 @@ def test_pagination_multiple_pages():
     assert len(calls) == 3, "Should have 3 calls recorded"
     
     # First call should not have pageToken
-    first_call_kwargs = calls[0][1] if calls[0][1] else calls[0][0][0] if calls[0][0] else {}
+    first_call_kwargs = calls[0].kwargs if hasattr(calls[0], 'kwargs') else calls[0][1]
     assert 'pageToken' not in first_call_kwargs, "First call should not have pageToken"
     
-    # Second and third calls should have pageToken
-    for i, expected_token in [(1, 'token_page_2'), (2, 'token_page_3')]:
-        call_kwargs = calls[i][1] if calls[i][1] else {}
-        assert 'pageToken' in call_kwargs, f"Call {i+1} should have pageToken"
-        assert call_kwargs['pageToken'] == expected_token, f"Call {i+1} should have token {expected_token}"
+    # Second call should have pageToken from first response
+    second_call_kwargs = calls[1].kwargs if hasattr(calls[1], 'kwargs') else calls[1][1]
+    assert 'pageToken' in second_call_kwargs, "Second call should have pageToken"
+    assert second_call_kwargs['pageToken'] == 'token_page_2', "Second call should have token_page_2"
+    
+    # Third call should have pageToken from second response
+    third_call_kwargs = calls[2].kwargs if hasattr(calls[2], 'kwargs') else calls[2][1]
+    assert 'pageToken' in third_call_kwargs, "Third call should have pageToken"
+    assert third_call_kwargs['pageToken'] == 'token_page_3', "Third call should have token_page_3"
     
     print("✅ Multiple page pagination test passed")
 
