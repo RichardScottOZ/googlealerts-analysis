@@ -11,8 +11,8 @@ from typing import List
 
 
 # Domains to exclude when extracting article URLs from emails
-# (social media sharing links, Google actions, etc.)
-EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
+# (social media sharing links, Google actions, W3C standards, etc.)
+EXCLUDE_DOMAINS = ['google', 'facebook', 'twitter', 'linkedin', 'youtube', 'w3.org']
 
 
 def extract_actual_url(url: str) -> str:

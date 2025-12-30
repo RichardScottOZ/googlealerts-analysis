@@ -242,6 +242,7 @@ def test_category_decision_with_articles():
 def test_url_extraction_filtering():
     """Test that URL extraction properly filters out non-article links."""
     import re
+    from url_utils import EXCLUDE_DOMAINS
     
     # Sample HTML with various link types
     sample_html = """
@@ -257,11 +258,10 @@ def test_url_extraction_filtering():
     matches = re.findall(link_pattern, sample_html)
     
     # Filter using the same logic as gmail_fetcher.py
-    exclude_domains = ['google', 'facebook', 'twitter', 'linkedin', 'youtube']
     articles = []
     
     for url, title in matches:
-        if url.startswith('http') and not any(domain in url.lower() for domain in exclude_domains):
+        if url.startswith('http') and not any(domain in url.lower() for domain in EXCLUDE_DOMAINS):
             articles.append({
                 'title': title.strip(),
                 'url': url,
@@ -412,6 +412,43 @@ def test_report_unicode_encoding():
     print("✅ Report Unicode encoding test passed")
 
 
+def test_xhtml_namespace_url_filtering():
+    """Test that XHTML namespace URLs are properly filtered out."""
+    from url_utils import is_excluded_domain
+    
+    # Test the XHTML namespace URL that was appearing in the bug report
+    xhtml_namespace_url = "http://www.w3.org/1999/xhtml"
+    
+    # This should be excluded
+    assert is_excluded_domain(xhtml_namespace_url), \
+        "XHTML namespace URL should be excluded from article extraction"
+    
+    # Test other W3C URLs that should also be filtered
+    w3c_urls = [
+        "https://www.w3.org/2000/svg",
+        "http://www.w3.org/TR/html5/",
+        "https://w3.org/standards/"
+    ]
+    
+    for url in w3c_urls:
+        assert is_excluded_domain(url), \
+            f"W3C URL {url} should be excluded from article extraction"
+    
+    # Test that legitimate article URLs are NOT excluded
+    legitimate_urls = [
+        "https://nature.com/articles/science-123",
+        "https://arxiv.org/abs/2024.12345",
+        "https://sciencedirect.com/article/xyz",
+        "https://example.com/blog/post"
+    ]
+    
+    for url in legitimate_urls:
+        assert not is_excluded_domain(url), \
+            f"Legitimate article URL {url} should NOT be excluded"
+    
+    print("✅ XHTML namespace URL filtering test passed")
+
+
 def run_all_tests():
     """Run all tests."""
     print("=" * 60)
@@ -432,6 +469,7 @@ def run_all_tests():
         test_url_extraction_filtering()
         test_google_redirect_url_extraction()
         test_report_unicode_encoding()
+        test_xhtml_namespace_url_filtering()
         
         print()
         print("=" * 60)
