@@ -226,7 +226,10 @@ class GmailAlertFetcher:
                     break
             
             if not messages:
-                print(f"No Google Alerts found in the last {days_back} days.")
+                if days_back_start and days_back_start > days_back:
+                    print(f"No Google Alerts found from {days_back_start} to {days_back} days ago.")
+                else:
+                    print(f"No Google Alerts found in the last {days_back} days.")
                 return []
             
             alerts = []
@@ -300,7 +303,10 @@ class GmailAlertFetcher:
                     break
             
             if not messages:
-                print(f"No Google Scholar Alerts found in the last {days_back} days.")
+                if days_back_start and days_back_start > days_back:
+                    print(f"No Google Scholar Alerts found from {days_back_start} to {days_back} days ago.")
+                else:
+                    print(f"No Google Scholar Alerts found in the last {days_back} days.")
                 return []
             
             alerts = []
