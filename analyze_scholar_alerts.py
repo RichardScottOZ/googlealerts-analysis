@@ -30,7 +30,8 @@ class ScholarAlertAnalyzer:
         llm_provider: str = "openai",
         llm_model: str = None,
         days_back: int = 7,
-        max_emails: int = 10
+        max_emails: int = 10,
+        days_back_start: int = None
     ):
         """
         Initialize Scholar Alert Analyzer.
@@ -38,11 +39,13 @@ class ScholarAlertAnalyzer:
         Args:
             llm_provider: LLM provider (openai or gemini)
             llm_model: Model name
-            days_back: Days to search back for alerts
+            days_back: Days to search back for alerts (end of range, closest to now)
             max_emails: Maximum number of emails to process
+            days_back_start: Optional start of date range (furthest from now)
         """
         self.days_back = days_back
         self.max_emails = max_emails
+        self.days_back_start = days_back_start
         
         # Initialize components
         self.gmail_fetcher = GmailAlertFetcher()
@@ -55,11 +58,22 @@ class ScholarAlertAnalyzer:
         Returns:
             Dictionary with analysis results
         """
-        print(f"🔍 Fetching Google Scholar Alerts from the last {self.days_back} days...")
+        if self.days_back_start and self.days_back_start > self.days_back:
+            print(f"🔍 Fetching Google Scholar Alerts from {self.days_back_start} to {self.days_back} days ago...")
+        else:
+            print(f"🔍 Fetching Google Scholar Alerts from the last {self.days_back} days...")
         
         # Get alert statistics
-        stats = self.gmail_fetcher.get_alert_statistics(days_back=self.days_back, alert_type='scholar')
-        print(f"📊 Google Scholar Alerts statistics (last {self.days_back} days):")
+        stats = self.gmail_fetcher.get_alert_statistics(
+            days_back=self.days_back,
+            alert_type='scholar',
+            days_back_start=self.days_back_start
+        )
+        
+        if self.days_back_start and self.days_back_start > self.days_back:
+            print(f"📊 Google Scholar Alerts statistics ({self.days_back_start} to {self.days_back} days ago):")
+        else:
+            print(f"📊 Google Scholar Alerts statistics (last {self.days_back} days):")
         print(f"   Total: {stats['total']}")
         print(f"   Unread: {stats['unread']}")
         print(f"   Read: {stats['read']}")
@@ -68,7 +82,8 @@ class ScholarAlertAnalyzer:
         # Fetch alerts from Gmail
         alerts = self.gmail_fetcher.fetch_scholar_alerts(
             days_back=self.days_back,
-            max_results=self.max_emails
+            max_results=self.max_emails,
+            days_back_start=self.days_back_start
         )
         
         if not alerts:
@@ -133,6 +148,7 @@ class ScholarAlertAnalyzer:
                 'llm_provider': self.categorizer.provider,
                 'llm_model': self.categorizer.model,
                 'days_back': self.days_back,
+                'days_back_start': self.days_back_start,
                 'max_emails': self.max_emails
             },
             'statistics': stats,
@@ -307,7 +323,13 @@ def main():
         '--days',
         type=int,
         default=None,
-        help='Days back to search (default: from .env or 7)'
+        help='Days back to search - end of range, closest to now (default: from .env or 7)'
+    )
+    parser.add_argument(
+        '--days-start',
+        type=int,
+        default=None,
+        help='Optional: Start of date range in days back (furthest from now). Use with --days to create a range. Example: --days-start 280 --days 250 searches emails from 280 to 250 days ago'
     )
     parser.add_argument(
         '--max-emails',
@@ -337,6 +359,7 @@ def main():
     llm_provider = args.provider or os.getenv('LLM_PROVIDER', 'openai')
     llm_model = args.model or os.getenv('LLM_MODEL')
     days_back = args.days or int(os.getenv('DAYS_BACK', '7'))
+    days_back_start = args.days_start or (int(os.getenv('DAYS_BACK_START')) if os.getenv('DAYS_BACK_START') else None)
     max_emails = args.max_emails or int(os.getenv('MAX_EMAILS_TO_PROCESS', '10'))
     
     try:
@@ -345,6 +368,7 @@ def main():
             llm_provider=llm_provider,
             llm_model=llm_model,
             days_back=days_back,
+            days_back_start=days_back_start,
             max_emails=max_emails
         )
         

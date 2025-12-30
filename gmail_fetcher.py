@@ -76,7 +76,7 @@ class GmailAlertFetcher:
         
         self.service = build('gmail', 'v1', credentials=creds)
         
-    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google') -> Dict[str, int]:
+    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google', days_back_start: int = None) -> Dict[str, int]:
         """
         Get statistics about Google Alert or Google Scholar Alert emails.
         
@@ -85,8 +85,9 @@ class GmailAlertFetcher:
         general inbox visibility.
         
         Args:
-            days_back: Number of days to search back (None for all time)
+            days_back: Number of days to search back (None for all time, or end of range if days_back_start is set)
             alert_type: Type of alert ('google' or 'scholar')
+            days_back_start: Optional start of date range (furthest from now)
             
         Returns:
             Dictionary with 'total', 'unread', and 'read' counts (approximate)
@@ -104,6 +105,12 @@ class GmailAlertFetcher:
             search_date = datetime.now() - timedelta(days=days_back)
             date_str = search_date.strftime('%Y/%m/%d')
             base_query += f' after:{date_str}'
+            
+            # If days_back_start is specified, add before: clause for date range
+            if days_back_start is not None and days_back_start > days_back:
+                before_date = datetime.now() - timedelta(days=days_back_start)
+                before_date_str = before_date.strftime('%Y/%m/%d')
+                base_query += f' before:{before_date_str}'
         
         try:
             # Get total count
@@ -139,7 +146,7 @@ class GmailAlertFetcher:
                 'read': 0
             }
     
-    def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10) -> List[Dict[str, Any]]:
+    def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10, days_back_start: int = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Alerts emails from Gmail.
         
@@ -147,8 +154,11 @@ class GmailAlertFetcher:
         pagination to fetch more than 500 emails if max_results exceeds 500.
         
         Args:
-            days_back: Number of days to search back
+            days_back: Number of days to search back (end of range, closest to now)
             max_results: Maximum number of emails to fetch
+            days_back_start: Optional start of date range (furthest from now). If specified,
+                           searches from days_back_start to days_back. For example:
+                           days_back=250, days_back_start=280 searches emails from 280 to 250 days ago.
             
         Returns:
             List of alert dictionaries with title, link, snippet, and date
@@ -162,6 +172,12 @@ class GmailAlertFetcher:
         
         # Search for Google Alerts emails
         query = f'from:googlealerts-noreply@google.com after:{date_str}'
+        
+        # If days_back_start is specified, add a before: clause to create a date range
+        if days_back_start is not None and days_back_start > days_back:
+            before_date = datetime.now() - timedelta(days=days_back_start)
+            before_date_str = before_date.strftime('%Y/%m/%d')
+            query = f'from:googlealerts-noreply@google.com after:{before_date_str} before:{date_str}'
         
         try:
             messages = []
@@ -214,7 +230,7 @@ class GmailAlertFetcher:
             print(f"Error fetching Google Alerts: {e}")
             return []
     
-    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10) -> List[Dict[str, Any]]:
+    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10, days_back_start: int = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Scholar Alerts emails from Gmail.
         
@@ -222,8 +238,11 @@ class GmailAlertFetcher:
         pagination to fetch more than 500 emails if max_results exceeds 500.
         
         Args:
-            days_back: Number of days to search back
+            days_back: Number of days to search back (end of range, closest to now)
             max_results: Maximum number of emails to fetch
+            days_back_start: Optional start of date range (furthest from now). If specified,
+                           searches from days_back_start to days_back. For example:
+                           days_back=250, days_back_start=280 searches emails from 280 to 250 days ago.
             
         Returns:
             List of alert dictionaries with title, link, snippet, and date
@@ -237,6 +256,12 @@ class GmailAlertFetcher:
         
         # Search for Google Scholar Alerts emails
         query = f'from:scholaralerts-noreply@google.com after:{date_str}'
+        
+        # If days_back_start is specified, add a before: clause to create a date range
+        if days_back_start is not None and days_back_start > days_back:
+            before_date = datetime.now() - timedelta(days=days_back_start)
+            before_date_str = before_date.strftime('%Y/%m/%d')
+            query = f'from:scholaralerts-noreply@google.com after:{before_date_str} before:{date_str}'
         
         try:
             messages = []
