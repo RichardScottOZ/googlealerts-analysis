@@ -181,12 +181,50 @@ Example output:
 **Keywords:** machine learning, copper, exploration, predictive modeling
 ```
 
+## Viewing Articles Chronologically
+
+After running the analysis scripts, use the `list_articles.py` helper script to view all articles in chronological order:
+
+```bash
+# List relevant articles from both Google Alerts and Scholar Alerts
+python list_articles.py
+
+# Include non-relevant articles too
+python list_articles.py --show-all
+
+# Save to markdown file
+python list_articles.py --format markdown --output articles.md
+
+# Save to JSON file
+python list_articles.py --format json --output articles.json
+
+# Generate separate outputs for each source
+python list_articles.py --separate --output articles.txt
+
+# Only show Google Alerts (not Scholar)
+python list_articles.py --google-alerts-only
+
+# Only show Scholar Alerts
+python list_articles.py --scholar-alerts-only
+
+# Use custom input files
+python list_articles.py --google-alerts my_report.json --scholar-alerts my_scholar.json
+```
+
+The script reads the default JSON outputs (`report.json` and `scholar_report.json`) and presents articles sorted by date (newest first) with:
+- Article title and URL
+- Summary
+- Date and source (Google Alert or Scholar Alert)
+- Relevance status and reasoning
+- Original alert query
+
 ## Project Structure
 
 ```
 googlealerts-analysis/
 ├── analyze_alerts.py          # Main orchestrator for Google Alerts
 ├── analyze_scholar_alerts.py  # Main orchestrator for Google Scholar Alerts
+├── list_articles.py           # Helper script to list articles chronologically
 ├── gmail_fetcher.py           # Gmail API integration (supports both alert types)
 ├── llm_categorizer.py         # LLM categorization logic
 ├── requirements.txt           # Python dependencies
