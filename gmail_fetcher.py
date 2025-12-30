@@ -21,6 +21,9 @@ from url_utils import extract_actual_url, is_excluded_domain, EXCLUDE_DOMAINS
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
+# Gmail API pagination limit
+GMAIL_API_MAX_RESULTS_PER_PAGE = 500
+
 # Compiled regex patterns for email parsing (for performance)
 URL_PATTERN = re.compile(r'https?://[^\s<>"\')]+[^\s<>"\'.,;:!?)\]]')
 LINK_PATTERN = re.compile(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', re.DOTALL)
@@ -163,7 +166,7 @@ class GmailAlertFetcher:
         try:
             messages = []
             page_token = None
-            max_iterations = (max_results // 500) + 2  # Safety limit with buffer
+            max_iterations = (max_results // GMAIL_API_MAX_RESULTS_PER_PAGE) + 2  # Safety limit with buffer
             iterations = 0
             
             # Gmail API limits maxResults to 500 per request, so we need pagination
@@ -171,7 +174,7 @@ class GmailAlertFetcher:
                 iterations += 1
                 
                 # Calculate how many more results we need
-                results_needed = min(max_results - len(messages), 500)
+                results_needed = min(max_results - len(messages), GMAIL_API_MAX_RESULTS_PER_PAGE)
                 
                 request_params = {
                     'userId': 'me',
@@ -238,7 +241,7 @@ class GmailAlertFetcher:
         try:
             messages = []
             page_token = None
-            max_iterations = (max_results // 500) + 2  # Safety limit with buffer
+            max_iterations = (max_results // GMAIL_API_MAX_RESULTS_PER_PAGE) + 2  # Safety limit with buffer
             iterations = 0
             
             # Gmail API limits maxResults to 500 per request, so we need pagination
@@ -246,7 +249,7 @@ class GmailAlertFetcher:
                 iterations += 1
                 
                 # Calculate how many more results we need
-                results_needed = min(max_results - len(messages), 500)
+                results_needed = min(max_results - len(messages), GMAIL_API_MAX_RESULTS_PER_PAGE)
                 
                 request_params = {
                     'userId': 'me',
