@@ -177,12 +177,14 @@ def test_invalid_date_range_ignored():
     with patch.object(fetcher, '_parse_alert_message') as mock_parse:
         mock_parse.return_value = {'alert_query': 'test', 'articles': []}
         
-        # Fetch with invalid date range (start=200 < end=250)
+        # Fetch with invalid date range (start=200, end=250)
+        # start=200 days ago is MORE RECENT than end=250 days ago, so this is invalid
+        # Valid would be: start=280 > end=250 (280 days ago is older than 250 days ago)
         # This should be ignored and treated as normal days_back
         alerts = fetcher.fetch_google_alerts(
             days_back=250,
             max_results=10,
-            days_back_start=200  # Invalid: start should be > end
+            days_back_start=200  # Invalid: 200 is not > 250, so range is ignored
         )
     
     # Verify the query does NOT include before: (invalid range ignored)

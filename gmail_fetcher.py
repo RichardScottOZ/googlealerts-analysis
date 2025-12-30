@@ -97,20 +97,15 @@ class GmailAlertFetcher:
         
         # Build query for alert emails based on type
         if alert_type == 'scholar':
-            base_query = 'from:scholaralerts-noreply@google.com'
+            sender = 'scholaralerts-noreply@google.com'
         else:
-            base_query = 'from:googlealerts-noreply@google.com'
+            sender = 'googlealerts-noreply@google.com'
         
+        # Build query with date range if days_back is specified
         if days_back:
-            search_date = datetime.now() - timedelta(days=days_back)
-            date_str = search_date.strftime('%Y/%m/%d')
-            base_query += f' after:{date_str}'
-            
-            # If days_back_start is specified, add before: clause for date range
-            if days_back_start is not None and days_back_start > days_back:
-                before_date = datetime.now() - timedelta(days=days_back_start)
-                before_date_str = before_date.strftime('%Y/%m/%d')
-                base_query += f' before:{before_date_str}'
+            base_query = self._build_date_range_query(sender, days_back, days_back_start)
+        else:
+            base_query = f'from:{sender}'
         
         try:
             # Get total count
@@ -146,6 +141,32 @@ class GmailAlertFetcher:
                 'read': 0
             }
     
+    def _build_date_range_query(self, sender: str, days_back: int, days_back_start: int = None) -> str:
+        """
+        Build a Gmail search query with date range.
+        
+        Args:
+            sender: Email sender to filter by
+            days_back: Number of days to search back (end of range, closest to now)
+            days_back_start: Optional start of date range (furthest from now)
+            
+        Returns:
+            Gmail search query string
+        """
+        search_date = datetime.now() - timedelta(days=days_back)
+        date_str = search_date.strftime('%Y/%m/%d')
+        
+        # Default query with only after: clause
+        query = f'from:{sender} after:{date_str}'
+        
+        # If days_back_start is specified, add a before: clause to create a date range
+        if days_back_start is not None and days_back_start > days_back:
+            before_date = datetime.now() - timedelta(days=days_back_start)
+            before_date_str = before_date.strftime('%Y/%m/%d')
+            query = f'from:{sender} after:{before_date_str} before:{date_str}'
+        
+        return query
+    
     def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10, days_back_start: int = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Alerts emails from Gmail.
@@ -166,18 +187,8 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Calculate date for query
-        search_date = datetime.now() - timedelta(days=days_back)
-        date_str = search_date.strftime('%Y/%m/%d')
-        
-        # Search for Google Alerts emails
-        query = f'from:googlealerts-noreply@google.com after:{date_str}'
-        
-        # If days_back_start is specified, add a before: clause to create a date range
-        if days_back_start is not None and days_back_start > days_back:
-            before_date = datetime.now() - timedelta(days=days_back_start)
-            before_date_str = before_date.strftime('%Y/%m/%d')
-            query = f'from:googlealerts-noreply@google.com after:{before_date_str} before:{date_str}'
+        # Build search query with date range
+        query = self._build_date_range_query('googlealerts-noreply@google.com', days_back, days_back_start)
         
         try:
             messages = []
@@ -250,18 +261,8 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Calculate date for query
-        search_date = datetime.now() - timedelta(days=days_back)
-        date_str = search_date.strftime('%Y/%m/%d')
-        
-        # Search for Google Scholar Alerts emails
-        query = f'from:scholaralerts-noreply@google.com after:{date_str}'
-        
-        # If days_back_start is specified, add a before: clause to create a date range
-        if days_back_start is not None and days_back_start > days_back:
-            before_date = datetime.now() - timedelta(days=days_back_start)
-            before_date_str = before_date.strftime('%Y/%m/%d')
-            query = f'from:scholaralerts-noreply@google.com after:{before_date_str} before:{date_str}'
+        # Build search query with date range
+        query = self._build_date_range_query('scholaralerts-noreply@google.com', days_back, days_back_start)
         
         try:
             messages = []
