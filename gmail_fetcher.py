@@ -140,6 +140,9 @@ class GmailAlertFetcher:
         """
         Fetch Google Alerts emails from Gmail.
         
+        Note: Gmail API has a limit of 500 results per request. This method implements
+        pagination to fetch more than 500 emails if max_results exceeds 500.
+        
         Args:
             days_back: Number of days to search back
             max_results: Maximum number of emails to fetch
@@ -158,13 +161,35 @@ class GmailAlertFetcher:
         query = f'from:googlealerts-noreply@google.com after:{date_str}'
         
         try:
-            results = self.service.users().messages().list(
-                userId='me',
-                q=query,
-                maxResults=max_results
-            ).execute()
+            messages = []
+            page_token = None
             
-            messages = results.get('messages', [])
+            # Gmail API limits maxResults to 500 per request, so we need pagination
+            while len(messages) < max_results:
+                # Calculate how many more results we need
+                results_needed = min(max_results - len(messages), 500)
+                
+                request_params = {
+                    'userId': 'me',
+                    'q': query,
+                    'maxResults': results_needed
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                results = self.service.users().messages().list(**request_params).execute()
+                
+                batch_messages = results.get('messages', [])
+                if not batch_messages:
+                    break
+                
+                messages.extend(batch_messages)
+                
+                # Check if there are more pages
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
             
             if not messages:
                 print(f"No Google Alerts found in the last {days_back} days.")
@@ -186,6 +211,9 @@ class GmailAlertFetcher:
         """
         Fetch Google Scholar Alerts emails from Gmail.
         
+        Note: Gmail API has a limit of 500 results per request. This method implements
+        pagination to fetch more than 500 emails if max_results exceeds 500.
+        
         Args:
             days_back: Number of days to search back
             max_results: Maximum number of emails to fetch
@@ -204,13 +232,35 @@ class GmailAlertFetcher:
         query = f'from:scholaralerts-noreply@google.com after:{date_str}'
         
         try:
-            results = self.service.users().messages().list(
-                userId='me',
-                q=query,
-                maxResults=max_results
-            ).execute()
+            messages = []
+            page_token = None
             
-            messages = results.get('messages', [])
+            # Gmail API limits maxResults to 500 per request, so we need pagination
+            while len(messages) < max_results:
+                # Calculate how many more results we need
+                results_needed = min(max_results - len(messages), 500)
+                
+                request_params = {
+                    'userId': 'me',
+                    'q': query,
+                    'maxResults': results_needed
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                results = self.service.users().messages().list(**request_params).execute()
+                
+                batch_messages = results.get('messages', [])
+                if not batch_messages:
+                    break
+                
+                messages.extend(batch_messages)
+                
+                # Check if there are more pages
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
             
             if not messages:
                 print(f"No Google Scholar Alerts found in the last {days_back} days.")
