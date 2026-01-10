@@ -30,7 +30,9 @@ class AlertAnalyzer:
         llm_provider: str = "openai",
         llm_model: str = None,
         days_back: int = 7,
-        max_emails: int = 10
+        max_emails: int = 10,
+        start_date: str = None,
+        end_date: str = None
     ):
         """
         Initialize Alert Analyzer.
@@ -40,9 +42,13 @@ class AlertAnalyzer:
             llm_model: Model name
             days_back: Days to search back for alerts
             max_emails: Maximum number of emails to process
+            start_date: Start date for alerts (YYYY-MM-DD)
+            end_date: End date for alerts (YYYY-MM-DD)
         """
         self.days_back = days_back
         self.max_emails = max_emails
+        self.start_date = start_date
+        self.end_date = end_date
         
         # Initialize components
         self.gmail_fetcher = GmailAlertFetcher()
@@ -55,11 +61,18 @@ class AlertAnalyzer:
         Returns:
             Dictionary with analysis results
         """
-        print(f"🔍 Fetching Google Alerts from the last {self.days_back} days...")
+        if self.start_date:
+            print(f"🔍 Fetching Google Alerts from {self.start_date} to {self.end_date or 'now'}...")
+        else:
+            print(f"🔍 Fetching Google Alerts from the last {self.days_back} days...")
         
         # Get alert statistics
-        stats = self.gmail_fetcher.get_alert_statistics(days_back=self.days_back)
-        print(f"📊 Google Alerts statistics (last {self.days_back} days):")
+        stats = self.gmail_fetcher.get_alert_statistics(
+            days_back=self.days_back,
+            start_date=self.start_date,
+            end_date=self.end_date
+        )
+        print(f"📊 Google Alerts statistics:")
         print(f"   Total: {stats['total']}")
         print(f"   Unread: {stats['unread']}")
         print(f"   Read: {stats['read']}")
@@ -68,7 +81,9 @@ class AlertAnalyzer:
         # Fetch alerts from Gmail
         alerts = self.gmail_fetcher.fetch_google_alerts(
             days_back=self.days_back,
-            max_results=self.max_emails
+            max_results=self.max_emails,
+            start_date=self.start_date,
+            end_date=self.end_date
         )
         
         if not alerts:
@@ -327,6 +342,18 @@ def main():
         default='markdown',
         help='Output format (default: markdown)'
     )
+    parser.add_argument(
+        '--start-date',
+        type=str,
+        default=None,
+        help='Start date in YYYY-MM-DD format (overrides days_back)'
+    )
+    parser.add_argument(
+        '--end-date',
+        type=str,
+        default=None,
+        help='End date in YYYY-MM-DD format'
+    )
     
     args = parser.parse_args()
     
@@ -345,7 +372,9 @@ def main():
             llm_provider=llm_provider,
             llm_model=llm_model,
             days_back=days_back,
-            max_emails=max_emails
+            max_emails=max_emails,
+            start_date=args.start_date,
+            end_date=args.end_date
         )
         
         # Run analysis
