@@ -73,7 +73,7 @@ class GmailAlertFetcher:
         
         self.service = build('gmail', 'v1', credentials=creds)
         
-    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google') -> Dict[str, int]:
+    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google', start_date: str = None, end_date: str = None) -> Dict[str, int]:
         """
         Get statistics about Google Alert or Google Scholar Alert emails.
         
@@ -84,6 +84,8 @@ class GmailAlertFetcher:
         Args:
             days_back: Number of days to search back (None for all time)
             alert_type: Type of alert ('google' or 'scholar')
+            start_date: Start date in YYYY-MM-DD format (overrides days_back)
+            end_date: End date in YYYY-MM-DD format (optional)
             
         Returns:
             Dictionary with 'total', 'unread', and 'read' counts (approximate)
@@ -97,10 +99,18 @@ class GmailAlertFetcher:
         else:
             base_query = 'from:googlealerts-noreply@google.com'
         
-        if days_back:
+        # Handle date filtering
+        if start_date:
+            gmail_start_date = start_date.replace('-', '/')
+            base_query += f' after:{gmail_start_date}'
+        elif days_back:
             search_date = datetime.now() - timedelta(days=days_back)
             date_str = search_date.strftime('%Y/%m/%d')
             base_query += f' after:{date_str}'
+            
+        if end_date:
+            gmail_end_date = end_date.replace('-', '/')
+            base_query += f' before:{gmail_end_date}'
         
         try:
             # Get total count
@@ -136,13 +146,15 @@ class GmailAlertFetcher:
                 'read': 0
             }
     
-    def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10) -> List[Dict[str, Any]]:
+    def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10, start_date: str = None, end_date: str = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Alerts emails from Gmail.
         
         Args:
             days_back: Number of days to search back
             max_results: Maximum number of emails to fetch
+            start_date: Start date in YYYY-MM-DD format (overrides days_back)
+            end_date: End date in YYYY-MM-DD format (optional)
             
         Returns:
             List of alert dictionaries with title, link, snippet, and date
@@ -150,12 +162,21 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Calculate date for query
-        search_date = datetime.now() - timedelta(days=days_back)
-        date_str = search_date.strftime('%Y/%m/%d')
-        
         # Search for Google Alerts emails
-        query = f'from:googlealerts-noreply@google.com after:{date_str}'
+        query = 'from:googlealerts-noreply@google.com'
+        
+        # Handle date filtering
+        if start_date:
+            gmail_start_date = start_date.replace('-', '/')
+            query += f' after:{gmail_start_date}'
+        elif days_back:
+            search_date = datetime.now() - timedelta(days=days_back)
+            date_str = search_date.strftime('%Y/%m/%d')
+            query += f' after:{date_str}'
+            
+        if end_date:
+            gmail_end_date = end_date.replace('-', '/')
+            query += f' before:{gmail_end_date}'
         
         try:
             results = self.service.users().messages().list(
@@ -182,13 +203,15 @@ class GmailAlertFetcher:
             print(f"Error fetching Google Alerts: {e}")
             return []
     
-    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10) -> List[Dict[str, Any]]:
+    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10, start_date: str = None, end_date: str = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Scholar Alerts emails from Gmail.
         
         Args:
             days_back: Number of days to search back
             max_results: Maximum number of emails to fetch
+            start_date: Start date in YYYY-MM-DD format (overrides days_back)
+            end_date: End date in YYYY-MM-DD format (optional)
             
         Returns:
             List of alert dictionaries with title, link, snippet, and date
@@ -196,12 +219,21 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Calculate date for query
-        search_date = datetime.now() - timedelta(days=days_back)
-        date_str = search_date.strftime('%Y/%m/%d')
-        
         # Search for Google Scholar Alerts emails
-        query = f'from:scholaralerts-noreply@google.com after:{date_str}'
+        query = 'from:scholaralerts-noreply@google.com'
+        
+        # Handle date filtering
+        if start_date:
+            gmail_start_date = start_date.replace('-', '/')
+            query += f' after:{gmail_start_date}'
+        elif days_back:
+            search_date = datetime.now() - timedelta(days=days_back)
+            date_str = search_date.strftime('%Y/%m/%d')
+            query += f' after:{date_str}'
+            
+        if end_date:
+            gmail_end_date = end_date.replace('-', '/')
+            query += f' before:{gmail_end_date}'
         
         try:
             results = self.service.users().messages().list(
