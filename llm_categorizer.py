@@ -271,7 +271,18 @@ Respond in JSON format:
     def _parse_response(self, response_text: str) -> CategoryDecision:
         """Parse LLM response into CategoryDecision."""
         try:
-            data = json.loads(response_text)
+            # Clean markdown code blocks if present
+            cleaned_text = response_text.strip()
+            if cleaned_text.startswith("```json"):
+                cleaned_text = cleaned_text[7:]
+            elif cleaned_text.startswith("```"):
+                cleaned_text = cleaned_text[3:]
+            if cleaned_text.endswith("```"):
+                cleaned_text = cleaned_text[:-3]
+            
+            cleaned_text = cleaned_text.strip()
+            
+            data = json.loads(cleaned_text)
             
             # Convert articles list to ArticleAnalysis objects
             articles_data = data.pop('articles', [])

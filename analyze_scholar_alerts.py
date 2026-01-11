@@ -349,6 +349,18 @@ def main():
         default='markdown',
         help='Output format (default: markdown)'
     )
+    parser.add_argument(
+        '--start-date',
+        type=str,
+        default=None,
+        help='Start date in YYYY-MM-DD format (overrides days_back)'
+    )
+    parser.add_argument(
+        '--end-date',
+        type=str,
+        default=None,
+        help='End date in YYYY-MM-DD format'
+    )
     
     args = parser.parse_args()
     
