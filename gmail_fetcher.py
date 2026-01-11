@@ -21,6 +21,9 @@ from url_utils import extract_actual_url, is_excluded_domain, EXCLUDE_DOMAINS
 # Gmail API scopes
 SCOPES = ['https://www.googleapis.com/auth/gmail.readonly']
 
+# Gmail API pagination limit
+GMAIL_API_MAX_RESULTS_PER_PAGE = 500
+
 # Compiled regex patterns for email parsing (for performance)
 URL_PATTERN = re.compile(r'https?://[^\s<>"\')]+[^\s<>"\'.,;:!?)\]]')
 LINK_PATTERN = re.compile(r'<a[^>]+href=["\']([^"\']+)["\'][^>]*>(.*?)</a>', re.DOTALL)
@@ -73,7 +76,7 @@ class GmailAlertFetcher:
         
         self.service = build('gmail', 'v1', credentials=creds)
         
-    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google', start_date: str = None, end_date: str = None) -> Dict[str, int]:
+    def get_alert_statistics(self, days_back: int = None, alert_type: str = 'google', days_back_start: int = None) -> Dict[str, int]:
         """
         Get statistics about Google Alert or Google Scholar Alert emails.
         
@@ -82,10 +85,9 @@ class GmailAlertFetcher:
         general inbox visibility.
         
         Args:
-            days_back: Number of days to search back (None for all time)
+            days_back: Number of days to search back (None for all time, or end of range if days_back_start is set)
             alert_type: Type of alert ('google' or 'scholar')
-            start_date: Start date in YYYY-MM-DD format (overrides days_back)
-            end_date: End date in YYYY-MM-DD format (optional)
+            days_back_start: Optional start of date range (furthest from now)
             
         Returns:
             Dictionary with 'total', 'unread', and 'read' counts (approximate)
@@ -95,22 +97,15 @@ class GmailAlertFetcher:
         
         # Build query for alert emails based on type
         if alert_type == 'scholar':
-            base_query = 'from:scholaralerts-noreply@google.com'
+            sender = 'scholaralerts-noreply@google.com'
         else:
-            base_query = 'from:googlealerts-noreply@google.com'
+            sender = 'googlealerts-noreply@google.com'
         
-        # Handle date filtering
-        if start_date:
-            gmail_start_date = start_date.replace('-', '/')
-            base_query += f' after:{gmail_start_date}'
-        elif days_back:
-            search_date = datetime.now() - timedelta(days=days_back)
-            date_str = search_date.strftime('%Y/%m/%d')
-            base_query += f' after:{date_str}'
-            
-        if end_date:
-            gmail_end_date = end_date.replace('-', '/')
-            base_query += f' before:{gmail_end_date}'
+        # Build query with date range if days_back is specified
+        if days_back:
+            base_query = self._build_date_range_query(sender, days_back, days_back_start)
+        else:
+            base_query = f'from:{sender}'
         
         try:
             # Get total count
@@ -146,15 +141,45 @@ class GmailAlertFetcher:
                 'read': 0
             }
     
-    def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10, start_date: str = None, end_date: str = None) -> List[Dict[str, Any]]:
+    def _build_date_range_query(self, sender: str, days_back: int, days_back_start: int = None) -> str:
+        """
+        Build a Gmail search query with date range.
+        
+        Args:
+            sender: Email sender to filter by
+            days_back: Number of days to search back (end of range, closest to now)
+            days_back_start: Optional start of date range (furthest from now)
+            
+        Returns:
+            Gmail search query string
+        """
+        search_date = datetime.now() - timedelta(days=days_back)
+        date_str = search_date.strftime('%Y/%m/%d')
+        
+        # Default query with only after: clause
+        query = f'from:{sender} after:{date_str}'
+        
+        # If days_back_start is specified, add a before: clause to create a date range
+        if days_back_start is not None and days_back_start > days_back:
+            before_date = datetime.now() - timedelta(days=days_back_start)
+            before_date_str = before_date.strftime('%Y/%m/%d')
+            query = f'from:{sender} after:{before_date_str} before:{date_str}'
+        
+        return query
+    
+    def fetch_google_alerts(self, days_back: int = 7, max_results: int = 10, days_back_start: int = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Alerts emails from Gmail.
         
+        Note: Gmail API has a limit of 500 results per request. This method implements
+        pagination to fetch more than 500 emails if max_results exceeds 500.
+        
         Args:
-            days_back: Number of days to search back
+            days_back: Number of days to search back (end of range, closest to now)
             max_results: Maximum number of emails to fetch
-            start_date: Start date in YYYY-MM-DD format (overrides days_back)
-            end_date: End date in YYYY-MM-DD format (optional)
+            days_back_start: Optional start of date range (furthest from now). If specified,
+                           searches from days_back_start to days_back. For example:
+                           days_back=250, days_back_start=280 searches emails from 280 to 250 days ago.
             
         Returns:
             List of alert dictionaries with title, link, snippet, and date
@@ -162,33 +187,49 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Search for Google Alerts emails
-        query = 'from:googlealerts-noreply@google.com'
-        
-        # Handle date filtering
-        if start_date:
-            gmail_start_date = start_date.replace('-', '/')
-            query += f' after:{gmail_start_date}'
-        elif days_back:
-            search_date = datetime.now() - timedelta(days=days_back)
-            date_str = search_date.strftime('%Y/%m/%d')
-            query += f' after:{date_str}'
-            
-        if end_date:
-            gmail_end_date = end_date.replace('-', '/')
-            query += f' before:{gmail_end_date}'
+        # Build search query with date range
+        query = self._build_date_range_query('googlealerts-noreply@google.com', days_back, days_back_start)
         
         try:
-            results = self.service.users().messages().list(
-                userId='me',
-                q=query,
-                maxResults=max_results
-            ).execute()
+            messages = []
+            page_token = None
+            max_iterations = (max_results // GMAIL_API_MAX_RESULTS_PER_PAGE) + 2  # Safety limit with buffer
+            iterations = 0
             
-            messages = results.get('messages', [])
+            # Gmail API limits maxResults to 500 per request, so we need pagination
+            while len(messages) < max_results and iterations < max_iterations:
+                iterations += 1
+                
+                # Calculate how many more results we need
+                results_needed = min(max_results - len(messages), GMAIL_API_MAX_RESULTS_PER_PAGE)
+                
+                request_params = {
+                    'userId': 'me',
+                    'q': query,
+                    'maxResults': results_needed
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                results = self.service.users().messages().list(**request_params).execute()
+                
+                batch_messages = results.get('messages', [])
+                if not batch_messages:
+                    break
+                
+                messages.extend(batch_messages)
+                
+                # Check if there are more pages
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
             
             if not messages:
-                print(f"No Google Alerts found in the last {days_back} days.")
+                if days_back_start and days_back_start > days_back:
+                    print(f"No Google Alerts found from {days_back_start} to {days_back} days ago.")
+                else:
+                    print(f"No Google Alerts found in the last {days_back} days.")
                 return []
             
             alerts = []
@@ -203,15 +244,19 @@ class GmailAlertFetcher:
             print(f"Error fetching Google Alerts: {e}")
             return []
     
-    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10, start_date: str = None, end_date: str = None) -> List[Dict[str, Any]]:
+    def fetch_scholar_alerts(self, days_back: int = 7, max_results: int = 10, days_back_start: int = None) -> List[Dict[str, Any]]:
         """
         Fetch Google Scholar Alerts emails from Gmail.
         
+        Note: Gmail API has a limit of 500 results per request. This method implements
+        pagination to fetch more than 500 emails if max_results exceeds 500.
+        
         Args:
-            days_back: Number of days to search back
+            days_back: Number of days to search back (end of range, closest to now)
             max_results: Maximum number of emails to fetch
-            start_date: Start date in YYYY-MM-DD format (overrides days_back)
-            end_date: End date in YYYY-MM-DD format (optional)
+            days_back_start: Optional start of date range (furthest from now). If specified,
+                           searches from days_back_start to days_back. For example:
+                           days_back=250, days_back_start=280 searches emails from 280 to 250 days ago.
             
         Returns:
             List of alert dictionaries with title, link, snippet, and date
@@ -219,33 +264,49 @@ class GmailAlertFetcher:
         if not self.service:
             self.authenticate()
         
-        # Search for Google Scholar Alerts emails
-        query = 'from:scholaralerts-noreply@google.com'
-        
-        # Handle date filtering
-        if start_date:
-            gmail_start_date = start_date.replace('-', '/')
-            query += f' after:{gmail_start_date}'
-        elif days_back:
-            search_date = datetime.now() - timedelta(days=days_back)
-            date_str = search_date.strftime('%Y/%m/%d')
-            query += f' after:{date_str}'
-            
-        if end_date:
-            gmail_end_date = end_date.replace('-', '/')
-            query += f' before:{gmail_end_date}'
+        # Build search query with date range
+        query = self._build_date_range_query('scholaralerts-noreply@google.com', days_back, days_back_start)
         
         try:
-            results = self.service.users().messages().list(
-                userId='me',
-                q=query,
-                maxResults=max_results
-            ).execute()
+            messages = []
+            page_token = None
+            max_iterations = (max_results // GMAIL_API_MAX_RESULTS_PER_PAGE) + 2  # Safety limit with buffer
+            iterations = 0
             
-            messages = results.get('messages', [])
+            # Gmail API limits maxResults to 500 per request, so we need pagination
+            while len(messages) < max_results and iterations < max_iterations:
+                iterations += 1
+                
+                # Calculate how many more results we need
+                results_needed = min(max_results - len(messages), GMAIL_API_MAX_RESULTS_PER_PAGE)
+                
+                request_params = {
+                    'userId': 'me',
+                    'q': query,
+                    'maxResults': results_needed
+                }
+                
+                if page_token:
+                    request_params['pageToken'] = page_token
+                
+                results = self.service.users().messages().list(**request_params).execute()
+                
+                batch_messages = results.get('messages', [])
+                if not batch_messages:
+                    break
+                
+                messages.extend(batch_messages)
+                
+                # Check if there are more pages
+                page_token = results.get('nextPageToken')
+                if not page_token:
+                    break
             
             if not messages:
-                print(f"No Google Scholar Alerts found in the last {days_back} days.")
+                if days_back_start and days_back_start > days_back:
+                    print(f"No Google Scholar Alerts found from {days_back_start} to {days_back} days ago.")
+                else:
+                    print(f"No Google Scholar Alerts found in the last {days_back} days.")
                 return []
             
             alerts = []
